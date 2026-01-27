@@ -20,3 +20,4 @@ private/
 .env
 .DS_Store
 data/
+exports/
