@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ellis Sinclair-Kent
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd

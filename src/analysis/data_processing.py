@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ellis Sinclair-Kent
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
 import pathlib
 import pandas as pd
 from openpyxl import load_workbook
