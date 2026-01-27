@@ -16,7 +16,7 @@ wheels/
 
 # Other
 temp/
-notes/
+private/
 .env
 .DS_Store
 data/
