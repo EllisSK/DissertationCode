@@ -7,4 +7,8 @@ requires-python = ">=3.14"
 dependencies = [
     "openpyxl>=3.1.5",
     "pandas>=3.0.0",
+<<<<<<< HEAD
+    "plotly>=6.5.2",
+=======
+>>>>>>> ce329fba12bd471243dfc77f14f3ac007c89f560
 ]
