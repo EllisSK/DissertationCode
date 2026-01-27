@@ -9,10 +9,10 @@ import plotly.graph_objects as go
 def create_custom_template():
     custom_template = go.layout.Template()
 
-    COLOURS = ["008dff", "d83034", "4ecb8d", "c701ff", "ff9d3a"]
+    COLOURS = ["#008dff", "#d83034", "#4ecb8d", "#c701ff", "#ff9d3a"]
 
     custom_template.layout = {
-        "font": {"family": "Aptos, sans-serif", "size": 12, "color": "black"},
+        "font": {"family": "Aptos, sans-serif", "size": 36, "color": "black"},
         "plot_bgcolor": "white",
         "paper_bgcolor": "white",
         "colorway": COLOURS,
@@ -30,6 +30,32 @@ def create_custom_template():
             "showgrid": False,
             "ticks": "outside",
         },
+        "title" : {
+            "font" : {
+                "family" : "Aptos Bold, sans-serif",
+                "size" : 48,
+                "color" : "black"
+            },
+            "x" : 0.0,
+            "xanchor" : "left"
+        },
+        "margin" : {
+            "l" : 150,
+            "b" : 100
+        }
+    }
+
+    custom_template.data = {
+        "scatter" : [
+            {
+                "line" : {
+                    "width" : 6
+                },
+                "marker" : {
+                    "size" : 18
+                }
+            }
+        ]
     }
 
     pio.templates["custom_template"] = custom_template

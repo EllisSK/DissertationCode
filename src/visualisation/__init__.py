@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-from .theme import create_custom_template
+from .template import *
+from .io import *
+from .plots import *
 
 create_custom_template()

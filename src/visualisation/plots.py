@@ -11,18 +11,46 @@ from typing import Callable
 
 
 def create_flow_head_plot(df: pd.DataFrame) -> go.Figure:
-    df_sorted = df.sort_values(by="Head (m)")
+    df_sorted = df.sort_values(by="Total Head (m)")
 
-    fig = px.scatter(
-        df_sorted,
-        x="Head (m)",
-        y="Flow (m3/s)",
-        color="Barrier Setup",
-        title=f"Flow v Head for a sluice by barrier setup",
-        template="presentation",
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x= df_sorted[df_sorted["Barrier Setup"] == "50-0-0"]["Total Head (m)"],
+        y= df_sorted[df_sorted["Barrier Setup"] == "50-0-0"]["Flow (m3/s)"],
+        name="50",
+        mode="lines+markers",
+        marker_symbol="x"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x= df_sorted[df_sorted["Barrier Setup"] == "100-0-0"]["Total Head (m)"],
+        y= df_sorted[df_sorted["Barrier Setup"] == "100-0-0"]["Flow (m3/s)"],
+        name="100",
+        mode="lines+markers",
+        marker_symbol="x"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x= df_sorted[df_sorted["Barrier Setup"] == "150-0-0"]["Total Head (m)"],
+        y= df_sorted[df_sorted["Barrier Setup"] == "150-0-0"]["Flow (m3/s)"],
+        name="150",
+        mode="lines+markers",
+        marker_symbol="x"
+    ))
+
+    fig.update_layout(
+        title="Sluice Gate Flow for Different Gap Sizes",
+        xaxis={
+            "title" : "Total Head (m)",
+            "range" : [0, None]
+        },
+        yaxis={
+            "title" : "Flow (m3/s)",
+            "range" : [0, None]
+        },
+        legend_title_text="Gap Size (mm)",
     )
-
-    fig.update_traces(mode="lines+markers", marker_symbol="x")
 
     return fig
 
