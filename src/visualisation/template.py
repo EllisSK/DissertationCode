@@ -9,7 +9,16 @@ import plotly.graph_objects as go
 def create_custom_template():
     custom_template = go.layout.Template()
 
-    COLOURS = ["#008dff", "#d83034", "#4ecb8d", "#c701ff", "#ff9d3a"]
+    COLOURS = [
+        "#008dff",
+        "#d83034",
+        "#4ecb8d",
+        "#c701ff",
+        "#ff9d3a",
+        "#ff73b6",
+        "#f9e858",
+        "#003a7d"
+    ]
 
     custom_template.layout = {
         "font": {"family": "Aptos, sans-serif", "size": 36, "color": "black"},
