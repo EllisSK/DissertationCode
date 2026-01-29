@@ -13,4 +13,4 @@ def test_sluice_model():
 
     result = sluice_equation(head, area, Cd)
 
-    assert float(result) == pytest.approx(flow)
+    assert result == pytest.approx(flow)
