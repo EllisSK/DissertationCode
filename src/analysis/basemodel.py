@@ -17,13 +17,13 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def predict(self, *args, **kwargs):
+    def predict(self, *args, **kwargs) -> pd.DataFrame:
         pass
 
     def fit(self, *args, **kwargs):
         pass
 
-    def write_report(self, report_path: Path):
+    def write_report(self, report_directory: Path):
         pass
 
     def create_figure(self):
@@ -32,7 +32,6 @@ class BaseModel(ABC):
     @abstractmethod
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
-        df = df[df["Operation Mode"] == "Sluice"]
 
         df["Set Flow (l/s)"] = pd.to_numeric(df["Set Flow (l/s)"], errors="coerce")
         df["Mean Upstream Depth (mm)"] = pd.to_numeric(df["Mean Upstream Depth (mm)"], errors="coerce")

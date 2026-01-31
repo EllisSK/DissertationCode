@@ -4,3 +4,4 @@
 
 from .models import *
 from .data_processing import *
+from .sluicemodels import *

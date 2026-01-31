@@ -14,23 +14,12 @@ def main():
 
     if args.analysis:
         lab_data = read_lab_data()
-        sluice_data = create_sluice_dataframe(lab_data)
-        create_model_report(
-            sluice_equation,
-            sluice_data,
-            "sluice_cd",
-            "Flow (m3/s)",
-            "Total Head (m)",
-            "Sluice Area (m2)",
-        )
+        simple_sluice_model = SimpleSluiceModel("simpleSluice")
+        sluice_dataframe = simple_sluice_model._create_model_dataframe(lab_data)
+        simple_sluice_model.fit(sluice_dataframe)
+        simple_sluice_model.write_report(Path("exports/reports"))
     if args.visualisation:
-        lab_data = read_lab_data()
-        sluice_data = create_sluice_dataframe(lab_data)
-        fig = create_flow_head_plot(sluice_data)
-        fig = add_function_to_plot(fig, sluice_equation, (0.15, 0.6), 0.01, "150 (Model)", 0.15, 0.611)
-        fig = add_function_to_plot(fig, sluice_equation, (0.1, 0.6), 0.01, "100 (Model)", 0.1, 0.611)
-        fig = add_function_to_plot(fig, sluice_equation, (0.05, 0.6), 0.01, "50 (Model)", 0.05, 0.611)
-        save_figure(fig, "sluice_flow_head", "sluice")
+        pass
     if args.solver:
         test_connection()
 
