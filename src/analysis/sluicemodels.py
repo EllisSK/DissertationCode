@@ -15,7 +15,8 @@ class SimpleSluiceModel(BaseModel):
         self.fitted = False
         self.optimal = 0.0
 
-    def _equation(self, upstream_depth, gap_size, coeff):
+    def _equation(self, X, coeff):
+        upstream_depth, gap_size = X
         return coeff * gap_size * np.sqrt(upstream_depth)
     
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -35,7 +36,14 @@ class SimpleSluiceModel(BaseModel):
             raise Exception("Model hasn't been fit yet!")
         
     def fit(self, df: pd.DataFrame):
-        self.popt, self.pcov = curve_fit(self._equation, df["Mean Upstream Depth (mm)"]/1000, df["Sluice Gap (m)"])
+        x_data = (
+            df["Mean Upstream Depth (mm)"]/1000, 
+            df["Sluice Gap (m)"]
+        )
+
+        y_data = df["Flow (m3/s)"]
+
+        self.popt, self.pcov = curve_fit(self._equation, x_data, y_data)
          
         self.optimal = self.popt[0]
         self.fitted = True
@@ -76,7 +84,6 @@ class AdvancedSluiceModel(BaseModel):
 
         df = df[df["Operation Mode"] == "Sluice"]
 
-        df["Total Head (m)"] = (df["Mean Upstream Depth (mm)"] / 1000) + ((df["Upstream Velocity (m/s)"] ** 2) / (2 * 9.80665))
         df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
         return df
     

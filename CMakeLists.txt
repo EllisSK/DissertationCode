@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ellis Sinclair-Kent
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
 cmake_minimum_required(VERSION 3.15)
 project(dissertation_solver LANGUAGES CXX)
 

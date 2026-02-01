@@ -2,6 +2,5 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-from .models import *
 from .data_processing import *
 from .sluicemodels import *

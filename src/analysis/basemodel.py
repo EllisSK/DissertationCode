@@ -38,5 +38,6 @@ class BaseModel(ABC):
 
         df["Flow (m3/s)"] = df["Set Flow (l/s)"] / 1000
         df["Upstream Velocity (m/s)"] = df["Flow (m3/s)"] / (df["Mean Upstream Depth (mm)"] / 1000)
+        df["Total Head (m)"] = (df["Mean Upstream Depth (mm)"] / 1000) + ((df["Upstream Velocity (m/s)"] ** 2) / (2 * 9.80665))
 
         return df
