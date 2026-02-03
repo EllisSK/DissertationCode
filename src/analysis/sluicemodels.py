@@ -24,20 +24,19 @@ class SimpleSluiceModel(BaseModel):
 
         df = df[df["Operation Mode"] == "Sluice"]
 
-        df["Total Head (m)"] = (df["Mean Upstream Depth (mm)"] / 1000) + ((df["Upstream Velocity (m/s)"] ** 2) / (2 * 9.80665))
         df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
         return df
     
     def predict(self, df: pd.DataFrame) -> pd.DataFrame:
         if self.fitted:
-            df["Modelled Flow (m3/s)"] = self._equation(df["Mean Upstream Depth (mm)"]/1000, df["Sluice Gap (m)"], self.optimal)
+            df["Modelled Flow (m3/s)"] = self._equation((df["Upstream Head (m)"], df["Sluice Gap (m)"]), self.optimal)
             return df
         else:
             raise Exception("Model hasn't been fit yet!")
         
     def fit(self, df: pd.DataFrame):
         x_data = (
-            df["Mean Upstream Depth (mm)"]/1000, 
+            df["Upstream Head (m)"], 
             df["Sluice Gap (m)"]
         )
 
@@ -88,6 +87,6 @@ class AdvancedSluiceModel(BaseModel):
         return df
     
     def predict(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["Modelled Flow (m3/s)"] = self._equation(df["Mean Upstream Depth (mm)"]/1000, df["Sluice Gap (m)"])
+        df["Modelled Flow (m3/s)"] = self._equation(df["Upstream Head (m)"], df["Sluice Gap (m)"])
 
         return df

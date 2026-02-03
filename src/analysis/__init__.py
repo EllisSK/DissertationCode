@@ -4,3 +4,6 @@
 
 from .data_processing import *
 from .sluicemodels import *
+from .weirmodels import *
+from .orificemodels import *
+from .combinedmodels import *
