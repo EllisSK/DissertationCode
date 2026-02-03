@@ -10,10 +10,11 @@ from .basemodel import BaseModel
 from scipy.optimize import curve_fit
 
 class SimpleOrificeModel(BaseModel):
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, lab_data: pd.DataFrame) -> None:
         super().__init__(name)
         self.fitted = False
         self.optimal = 0.0
+        self.df = self._create_model_dataframe(lab_data)
 
     def _equation(self, X, coeff):
         bottom, top = X
@@ -48,19 +49,21 @@ class SimpleOrificeModel(BaseModel):
         df["Depth at Top (m)"] = df["Upstream Head (m)"] - df["Orifice Top Height (m)"]
 
         df = df[df["Depth at Top (m)"] > 0]
-
-        print(df)
         
         return df
     
-    def predict(self, df: pd.DataFrame) -> pd.DataFrame:
+    def predict(self) -> pd.DataFrame:
+        df = self.df
+
         if self.fitted:
             df["Modelled Flow (m3/s)"] = self._equation((df["Depth at Bottom (m)"], df["Depth at Top (m)"]), self.optimal)
             return df
         else:
             raise Exception("Model hasn't been fit yet!")
         
-    def fit(self, df: pd.DataFrame):
+    def fit(self):
+        df = self.df
+
         x_data = (
             df["Depth at Bottom (m)"], 
             df["Depth at Top (m)"]

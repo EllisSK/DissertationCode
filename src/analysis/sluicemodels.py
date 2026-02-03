@@ -10,10 +10,11 @@ from .basemodel import BaseModel
 from scipy.optimize import curve_fit
 
 class SimpleSluiceModel(BaseModel):
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, lab_data: pd.DataFrame) -> None:
         super().__init__(name)
         self.fitted = False
         self.optimal = 0.0
+        self.df = self._create_model_dataframe(lab_data)
 
     def _equation(self, X, coeff):
         upstream_depth, gap_size = X
@@ -27,14 +28,18 @@ class SimpleSluiceModel(BaseModel):
         df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
         return df
     
-    def predict(self, df: pd.DataFrame) -> pd.DataFrame:
+    def predict(self) -> pd.DataFrame:
+        df = self.df
+        
         if self.fitted:
             df["Modelled Flow (m3/s)"] = self._equation((df["Upstream Head (m)"], df["Sluice Gap (m)"]), self.optimal)
             return df
         else:
             raise Exception("Model hasn't been fit yet!")
         
-    def fit(self, df: pd.DataFrame):
+    def fit(self):
+        df = self.df
+
         x_data = (
             df["Upstream Head (m)"], 
             df["Sluice Gap (m)"]
