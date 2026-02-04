@@ -36,12 +36,10 @@ class SimpleWeirModel(BaseModel):
 
         return df
     
-    def predict(self) -> pd.DataFrame:
-        df = self.df
-        
+    def predict(self, X):
         if self.fitted:
-            df["Modelled Flow (m3/s)"] = self._equation(df["Head on Weir (m)"], self.optimal)
-            return df
+            flow = self._equation(X, self.optimal)
+            return flow
         else:
             raise Exception("Model hasn't been fit yet!")
         

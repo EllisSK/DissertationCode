@@ -17,7 +17,7 @@ class BaseModel(ABC):
         pass
 
     @abstractmethod
-    def predict(self, *args, **kwargs) -> pd.DataFrame:
+    def predict(self, *args, **kwargs):
         pass
 
     def fit(self, *args, **kwargs):

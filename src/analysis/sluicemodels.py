@@ -28,12 +28,10 @@ class SimpleSluiceModel(BaseModel):
         df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
         return df
     
-    def predict(self) -> pd.DataFrame:
-        df = self.df
-        
+    def predict(self, X):
         if self.fitted:
-            df["Modelled Flow (m3/s)"] = self._equation((df["Upstream Head (m)"], df["Sluice Gap (m)"]), self.optimal)
-            return df
+            flow = self._equation(X, self.optimal)
+            return flow
         else:
             raise Exception("Model hasn't been fit yet!")
         
@@ -91,7 +89,5 @@ class AdvancedSluiceModel(BaseModel):
         df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
         return df
     
-    def predict(self, df: pd.DataFrame) -> pd.DataFrame:
-        df["Modelled Flow (m3/s)"] = self._equation(df["Upstream Head (m)"], df["Sluice Gap (m)"])
-
-        return df
+    def predict(self, df: pd.DataFrame):
+        pass

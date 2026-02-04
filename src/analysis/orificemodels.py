@@ -24,15 +24,15 @@ class SimpleOrificeModel(BaseModel):
         barrier_setup = row["Barrier Setup"]
         split_data = list(map(int, barrier_setup.split("-")))
 
-        gap2 = split_data[1]
-        gap3 = split_data[2]
+        gap2 = split_data[1] / 1000
+        gap3 = split_data[2] / 1000
 
         if gap2 > 0:
-            orifice_size = gap2 / 1000
+            orifice_size = gap2
             orifice_bottom = 0.2
             orifice_top = orifice_bottom + orifice_size
         else:
-            orifice_size = gap3 / 1000
+            orifice_size = gap3
             orifice_bottom = 0.3
             orifice_top = orifice_bottom + orifice_size
 
@@ -52,12 +52,10 @@ class SimpleOrificeModel(BaseModel):
         
         return df
     
-    def predict(self) -> pd.DataFrame:
-        df = self.df
-
+    def predict(self, X):
         if self.fitted:
-            df["Modelled Flow (m3/s)"] = self._equation((df["Depth at Bottom (m)"], df["Depth at Top (m)"]), self.optimal)
-            return df
+            flow = self._equation(X, self.optimal)
+            return flow
         else:
             raise Exception("Model hasn't been fit yet!")
         
