@@ -158,7 +158,7 @@ class SimpleCombinedModel(BaseModel):
 
                 return (0, 0, 0, 0, 0, 0, h_weir)
 
-    def plotting_function(self, barrier_setup, upstream_depth):
+    def plotting_function(self, upstream_depth, barrier_setup):
         return self._equation(self._params_from_setup(barrier_setup, upstream_depth))
     
     def predict(self, barrier_setup, upstream_depth):

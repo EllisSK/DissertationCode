@@ -10,46 +10,31 @@ import numpy as np
 from typing import Callable
 
 
-def create_flow_head_plot(df: pd.DataFrame) -> go.Figure:
-    df_sorted = df.sort_values(by="Total Head (m)")
+def create_flow_us_depth_plot(df: pd.DataFrame, setups: list[str]) -> go.Figure:
+    df_sorted = df.sort_values(by="Mean Upstream Depth (mm)")
 
     fig = go.Figure()
 
-    fig.add_trace(go.Scatter(
-        x= df_sorted[df_sorted["Barrier Setup"] == "50-0-0"]["Total Head (m)"],
-        y= df_sorted[df_sorted["Barrier Setup"] == "50-0-0"]["Flow (m3/s)"],
-        name="50",
-        mode="lines+markers",
-        marker_symbol="x"
-    ))
-
-    fig.add_trace(go.Scatter(
-        x= df_sorted[df_sorted["Barrier Setup"] == "100-0-0"]["Total Head (m)"],
-        y= df_sorted[df_sorted["Barrier Setup"] == "100-0-0"]["Flow (m3/s)"],
-        name="100",
-        mode="lines+markers",
-        marker_symbol="x"
-    ))
-
-    fig.add_trace(go.Scatter(
-        x= df_sorted[df_sorted["Barrier Setup"] == "150-0-0"]["Total Head (m)"],
-        y= df_sorted[df_sorted["Barrier Setup"] == "150-0-0"]["Flow (m3/s)"],
-        name="150",
-        mode="lines+markers",
-        marker_symbol="x"
-    ))
+    for setup in setups:
+        fig.add_trace(go.Scatter(
+            x= df_sorted[df_sorted["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"],
+            y= df_sorted[df_sorted["Barrier Setup"] == setup]["Flow (m3/s)"],
+            name=setup,
+            mode="lines+markers",
+            marker_symbol="x"
+        ))
 
     fig.update_layout(
-        title="Sluice Gate Flow for Different Gap Sizes",
+        title="Barrier Flow for Different Geometric Configurations",
         xaxis={
-            "title" : "Total Head (m)",
+            "title" : "Mean Upstream Depth (mm)",
             "range" : [0, None]
         },
         yaxis={
             "title" : "Flow (m3/s)",
             "range" : [0, None]
         },
-        legend_title_text="Gap Size (mm)",
+        legend_title_text="Barrier Setup (mm)",
     )
 
     return fig
@@ -71,6 +56,8 @@ def add_function_to_plot(
         x = x_array[i]
         y = function(x, *args)
         y_array[i] = y
+
+    x_array = x_array * 1000
 
     fig.add_trace(go.Scatter(x=x_array, y=y_array, mode="lines", name=func_name))
 
