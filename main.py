@@ -32,15 +32,9 @@ def main():
 
     if args.visualisation:
         lab_data = read_lab_data()
-        simple_combined_model = SimpleCombinedModel("simpleCombined", lab_data)
 
-        #setups = simple_combined_model.df["Barrier Setup"].unique()
-        setups = ["100-100-50"]
+        visualisation_1_1(lab_data)
 
-        us_depth_fig = create_flow_us_depth_plot(simple_combined_model.df, setups)
-        for setup in setups:
-            add_function_to_plot(us_depth_fig, simple_combined_model.plotting_function, (0.1, 0.7), 0.001, f"{setup} Model", setup)
-        save_figure(us_depth_fig, "CombinedModelTest", "SimpleCombinedModel")
     if args.solver:
         test_connection()
 
