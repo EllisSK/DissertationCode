@@ -22,3 +22,5 @@ private/
 .DS_Store
 data/
 exports/
+.vscode/
+build/

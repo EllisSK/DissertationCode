@@ -41,3 +41,28 @@ class BaseModel(ABC):
         df["Upstream Head (m)"] = (df["Mean Upstream Depth (mm)"] / 1000)
 
         return df
+    
+    @abstractmethod
+    def _calculate_objective_functions(self, df: pd.DataFrame) -> tuple:
+        pass
+
+    def _rmse(self, observed, predicted):
+        return ((predicted - observed) ** 2).mean() ** 0.5
+
+    def _mae(self, observed, predicted):
+        return (predicted - observed).abs().mean()
+
+    def _bias(self, observed, predicted):
+        return (predicted - observed).mean()
+
+    def _variability(self, observed, predicted):
+        return predicted.std() / observed.std()
+
+    def _correlation(self, observed, predicted):
+        return observed.corr(predicted)
+
+    def _kge(self, observed, predicted):
+        corr = self._correlation(observed, predicted)
+        var = self._variability(observed, predicted)
+        bias = predicted.mean() / observed.mean()
+        return 1 - ((corr - 1) ** 2 + (var - 1) ** 2 + (bias - 1) ** 2) ** 0.5
