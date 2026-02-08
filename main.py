@@ -31,7 +31,7 @@ def main():
         simple_combined_model = SimpleCombinedModel("simpleCombined", lab_data)
         simple_combined_model.write_report(reports_dir)
 
-        if_combined_model = IFCombinedModel("ifCombined", lab_data)
+        if_combined_model = SimpleIFCombinedModel("simpleIfCombined", lab_data)
         if_combined_model.fit()
         if_combined_model.write_report(reports_dir)
 
@@ -43,6 +43,9 @@ def main():
 
         advanced_weir_model = AdvancedWeirModel("advancedWeir", lab_data)
         advanced_weir_model.write_report(reports_dir)
+
+        advanced_combined_model = AdvancedCombinedModel("advancedCombined", lab_data)
+        advanced_combined_model.write_report(reports_dir)
 
     if args.visualisation:
         lab_data = read_lab_data()
