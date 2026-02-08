@@ -86,10 +86,14 @@ class SimpleSluiceModel(BaseModel):
             raise Exception("Model hasn't been fit yet!")
     
 class AdvancedSluiceModel(BaseModel):
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, lab_data: pd.DataFrame) -> None:
         super().__init__(name)
 
-    def _equation(self, upstream_depth, gap_size):
+        self.df = self._create_model_dataframe(lab_data)
+
+    def _equation(self, X):
+        upstream_depth, gap_size = X
+        
         coeff_contraction = np.pi / (np.pi + 2)
         coeff_velocity = 0.98
 
@@ -98,7 +102,7 @@ class AdvancedSluiceModel(BaseModel):
 
         head = upstream_depth - vc_depth
 
-        return coeff_discharge * np.sqrt(2 * 9.80665 * head)
+        return coeff_discharge * gap_size * np.sqrt(2 * 9.80665 * head)
     
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df = super()._create_model_dataframe(df)
@@ -108,5 +112,37 @@ class AdvancedSluiceModel(BaseModel):
         df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
         return df
     
-    def predict(self, df: pd.DataFrame):
-        pass
+    def predict(self, X):
+        flow = self._equation(X)
+        return flow
+    
+    def _calculate_objective_functions(self, df: pd.DataFrame):
+        df = df.copy()
+        df["Predicted"] = self.predict((df["Upstream Head (m)"], df["Sluice Gap (m)"]))
+        
+        observed = df["Flow (m3/s)"]
+        predicted = df["Predicted"]
+        
+        rmse = self._rmse(observed, predicted)
+        mae = self._mae(observed, predicted)
+        bias = self._bias(observed, predicted)
+        var = self._variability(observed, predicted)
+        corr = self._correlation(observed, predicted)
+        kge = self._kge(observed, predicted)
+
+        return rmse, mae, bias, var, corr, kge
+
+    def write_report(self, report_directory: Path):
+        file_path = report_directory / f"{self.name}.txt"
+        
+
+        rmse, mae, bias, var, corr, kge = self._calculate_objective_functions(self.df)
+        
+        with open(file_path, "w") as f:
+            f.write(f"Advanced Sluice Model Report\n")
+            f.write(f"RMSE: {rmse}\n")
+            f.write(f"MAE: {mae}\n")
+            f.write(f"Absolute Bias: {bias}\n")
+            f.write(f"Variability Ratio: {var}\n")
+            f.write(f"Correlation: {corr}\n")
+            f.write(f"KGE: {kge}\n")

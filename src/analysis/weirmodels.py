@@ -93,7 +93,65 @@ class SimpleWeirModel(BaseModel):
             raise Exception("Model hasn't been fit yet!")
 
 class AdvancedWeirModel(BaseModel):
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, lab_data: pd.DataFrame) -> None:
         super().__init__(name)
-        self.fitted = False
-        self.optimal = 0.0
+        self.df = self._create_model_dataframe(lab_data)
+
+    def _equation(self, X):
+        h, p = X
+
+        coeff_discharge = (np.pi / (np.pi + 2)) + (0.075*(h/p))
+
+        return (2/3) * coeff_discharge * np.sqrt(2 * 9.80665) * np.power(h, 1.5)
+
+    def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = super()._create_model_dataframe(df)
+
+        df = df[(df["Operation Mode"] == "Weir")]
+
+        split_data = df["Barrier Setup"].str.split("-", expand=True).astype(int)
+        is_gap1_zero = split_data[0] == 0
+        is_gap2_zero = split_data[1] == 0
+        is_gap3_zero = split_data[2] == 0
+
+        df["Weir Height (m)"] = ((is_gap1_zero * 0.2) + ((is_gap1_zero & is_gap2_zero) * 0.1) + ((is_gap1_zero & is_gap2_zero & is_gap3_zero) * 0.1))
+        df["Head on Weir (m)"] = df["Upstream Head (m)"] - df["Weir Height (m)"]
+
+        df = df[(df["Head on Weir (m)"] > 0)]
+
+        return df
+    
+    def predict(self, X):
+        flow = self._equation(X)
+        return flow
+
+    def _calculate_objective_functions(self, df: pd.DataFrame):
+        df = df.copy()
+        df["Predicted"] = self.predict((df["Head on Weir (m)"], df["Weir Height (m)"]))
+        
+        observed = df["Flow (m3/s)"]
+        predicted = df["Predicted"]
+        
+        rmse = self._rmse(observed, predicted)
+        mae = self._mae(observed, predicted)
+        bias = self._bias(observed, predicted)
+        var = self._variability(observed, predicted)
+        corr = self._correlation(observed, predicted)
+        kge = self._kge(observed, predicted)
+
+        return rmse, mae, bias, var, corr, kge
+
+    def write_report(self, report_directory: Path):
+        file_path = report_directory / f"{self.name}.txt"
+        
+
+        rmse, mae, bias, var, corr, kge = self._calculate_objective_functions(self.df)
+        
+        with open(file_path, "w") as f:
+            f.write(f"Advanced Weir Model Report\n")
+            f.write(f"RMSE: {rmse}\n")
+            f.write(f"MAE: {mae}\n")
+            f.write(f"Absolute Bias: {bias}\n")
+            f.write(f"Variability Ratio: {var}\n")
+            f.write(f"Correlation: {corr}\n")
+            f.write(f"KGE: {kge}\n")

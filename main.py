@@ -35,6 +35,15 @@ def main():
         if_combined_model.fit()
         if_combined_model.write_report(reports_dir)
 
+        advanced_sluice_model = AdvancedSluiceModel("advancedSluice", lab_data)
+        advanced_sluice_model.write_report(reports_dir)
+
+        advanced_orifice_model = AdvancedOrificeModel("advancedOrifice", lab_data)
+        advanced_orifice_model.write_report(reports_dir)
+
+        advanced_weir_model = AdvancedWeirModel("advancedWeir", lab_data)
+        advanced_weir_model.write_report(reports_dir)
+
     if args.visualisation:
         lab_data = read_lab_data()
 
