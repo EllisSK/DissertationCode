@@ -56,7 +56,7 @@ def visualisation_1_3(lab_data: pd.DataFrame):
         save_figure(us_depth_fig, setup, "SimpleCombinedAllSetups")
 
 def visualisation_1_4():
-    us_profile = 280+np.sin(np.linspace(0, 500, num=5000))
-    ds_profile = 50+30*np.sin(np.linspace(3.14+1.57, 6.28, num=5000))
+    us_profile = np.linspace(280, 280, num=5000)
+    ds_profile = np.concatenate([np.full(1000, 61), 120.5 - 59.5 * np.cos(np.linspace(0, np.pi, 500)), np.full(3500, 180)])
     fig = create_barrier_depth_diagram("100-100-100", us_profile, ds_profile, "Test Plot - Sluice Flow Example")
     fig.savefig("exports/figures/barriertest.svg")

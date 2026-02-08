@@ -132,10 +132,10 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     ax.tick_params(which="major", length=7)
     ax.tick_params(which="minor", length=3)
 
-    ax.set_title(title, fontname="Arial", fontweight="bold", fontsize=11, loc="left")
+    plt.subplots_adjust(top=0.85, bottom=0.25)
+    fig.text(0.02, 0.98, title, ha="left", va="top", fontweight="bold", fontsize=11)
 
-    plt.xlabel("Position (mm)", fontname="Arial")
-    plt.ylabel("Depth (mm)", fontname="Arial")
-    plt.tight_layout()
+    plt.xlabel("Position (mm)", fontname="Arial", fontdict={"size":11})
+    plt.ylabel("Depth (mm)", fontname="Arial", fontdict={"size":11})
 
     return fig
