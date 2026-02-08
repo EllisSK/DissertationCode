@@ -10,6 +10,7 @@ import numpy as np
 from .baseplots import *
 from .io import *
 from src.analysis import *
+from tqdm import tqdm
 
 
 def visualisation_1_1(lab_data: pd.DataFrame):
@@ -40,3 +41,22 @@ def visualisation_1_2(lab_data: pd.DataFrame):
     save_figure(us_depth_fig, "Figure1_2", "Methodology")
 
     return us_depth_fig
+
+def visualisation_1_3(lab_data: pd.DataFrame):
+    simple_combined_model = SimpleCombinedModel("simpleCombined", lab_data)
+
+    setups = simple_combined_model.df["Barrier Setup"].unique()
+
+    print("Creating plots for the simple combined model:")
+    for setup in tqdm(setups):
+        us_depth_fig = create_flow_us_depth_plot(simple_combined_model.df, [setup], title=f"Simple Combined Model Performance for {setup}")
+        min_us_depth = simple_combined_model.df[simple_combined_model.df["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"].min()/1000
+        max_us_depth = simple_combined_model.df[simple_combined_model.df["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"].max()/1000
+        add_function_to_plot(us_depth_fig, simple_combined_model.plotting_function, (min_us_depth, max_us_depth), 0.001, f"{setup} Model", 1000, 1, setup)
+        save_figure(us_depth_fig, setup, "SimpleCombinedAllSetups")
+
+def visualisation_1_4():
+    us_profile = 280+np.sin(np.linspace(0, 500, num=5000))
+    ds_profile = 50+30*np.sin(np.linspace(3.14+1.57, 6.28, num=5000))
+    fig = create_barrier_depth_diagram("100-100-100", us_profile, ds_profile, "Test Plot - Sluice Flow Example")
+    fig.savefig("exports/figures/barriertest.svg")

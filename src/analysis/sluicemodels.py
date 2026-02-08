@@ -90,20 +90,15 @@ class AdvancedSluiceModel(BaseModel):
         super().__init__(name)
 
     def _equation(self, upstream_depth, gap_size):
-        submerged = False
-        
-        if not submerged:
-            coeff_contraction = np.pi / (np.pi + 2)
-            coeff_velocity = 0.98
+        coeff_contraction = np.pi / (np.pi + 2)
+        coeff_velocity = 0.98
 
-            coeff_discharge = coeff_contraction * coeff_velocity
-            vc_depth = coeff_contraction * gap_size
+        coeff_discharge = coeff_contraction * coeff_velocity
+        vc_depth = coeff_contraction * gap_size
 
-            head = upstream_depth - vc_depth
+        head = upstream_depth - vc_depth
 
-            return coeff_discharge * np.sqrt(2 * 9.80665 * head)
-        else:
-            pass
+        return coeff_discharge * np.sqrt(2 * 9.80665 * head)
     
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df = super()._create_model_dataframe(df)
