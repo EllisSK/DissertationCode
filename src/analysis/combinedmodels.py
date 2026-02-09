@@ -603,7 +603,7 @@ class AdvancedCombinedModel(BaseModel):
         rmse, mae, bias, var, corr, kge = self._calculate_objective_functions(self.df)
         
         with open(file_path, "w") as f:
-            f.write(f"Simple Combined Model Report\n")
+            f.write(f"Advanced Combined Model Report\n")
             f.write(f"RMSE: {rmse}\n")
             f.write(f"MAE: {mae}\n")
             f.write(f"Absolute Bias: {bias}\n")

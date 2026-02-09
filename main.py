@@ -58,6 +58,8 @@ def main():
 
         visualisation_1_4()
 
+        visualisation_1_5(lab_data)
+
     if args.solver:
         test_connection()
 
