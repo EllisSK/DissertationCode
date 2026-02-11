@@ -66,3 +66,6 @@ class BaseModel(ABC):
         var = self._variability(observed, predicted)
         bias = predicted.mean() / observed.mean()
         return 1 - ((corr - 1) ** 2 + (var - 1) ** 2 + (bias - 1) ** 2) ** 0.5
+    
+    def _r2(self, observed, predicted):
+            return 1 - ((predicted - observed) ** 2).sum() / ((observed - observed.mean()) ** 2).sum()

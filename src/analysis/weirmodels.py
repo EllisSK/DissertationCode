@@ -100,7 +100,7 @@ class AdvancedWeirModel(BaseModel):
     def _equation(self, X):
         h, p = X
 
-        coeff_discharge = (np.pi / (np.pi + 2)) + (0.075*(h/p))
+        coeff_discharge = (np.pi / (np.pi + 2)) * 0.98
 
         return (2/3) * coeff_discharge * np.sqrt(2 * 9.80665) * np.power(h, 1.5)
 

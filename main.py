@@ -54,7 +54,7 @@ def main():
 
         visualisation_1_2(lab_data)
 
-        #visualisation_1_3(lab_data)
+        visualisation_1_3(lab_data)
 
         visualisation_1_4()
 

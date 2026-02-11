@@ -20,8 +20,8 @@ def create_flow_us_depth_plot(df: pd.DataFrame, setups: list[str], title: str = 
 
     for setup in setups:
         fig.add_trace(go.Scatter(
-            x= df_sorted[df_sorted["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"],
-            y= df_sorted[df_sorted["Barrier Setup"] == setup]["Flow (m3/s)"],
+            y= df_sorted[df_sorted["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"],
+            x= df_sorted[df_sorted["Barrier Setup"] == setup]["Flow (m3/s)"],
             name=setup,
             mode="markers",
             marker_symbol="x"
@@ -29,11 +29,11 @@ def create_flow_us_depth_plot(df: pd.DataFrame, setups: list[str], title: str = 
 
     fig.update_layout(
         title=title,
-        xaxis={
+        yaxis={
             "title" : "Mean Upstream Depth (mm)",
             "range" : [0, None]
         },
-        yaxis={
+        xaxis={
             "title" : "Flow (m3/s)",
             "range" : [0, None]
         },
@@ -65,7 +65,7 @@ def add_function_to_plot(
     x_array = x_array * x_multiplier
     y_array = y_array * y_multiplier
 
-    fig.add_trace(go.Scatter(x=x_array, y=y_array, mode="lines", name=func_name))
+    fig.add_trace(go.Scatter(x=y_array, y=x_array, mode="lines", name=func_name))
 
     return fig
 

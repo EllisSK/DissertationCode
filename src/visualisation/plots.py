@@ -66,7 +66,7 @@ def visualisation_1_5(lab_data: pd.DataFrame):
 
     setups = simple_combined_model.df["Barrier Setup"].unique()
 
-    print("Creating plots for the simple combined model:")
+    print("Creating plots for the advanced combined model:")
     for setup in tqdm(setups):
         us_depth_fig = create_flow_us_depth_plot(simple_combined_model.df, [setup], title=f"Advanced Combined Model Performance for {setup}")
         min_us_depth = simple_combined_model.df[simple_combined_model.df["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"].min()/1000

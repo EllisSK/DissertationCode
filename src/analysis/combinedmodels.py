@@ -183,13 +183,14 @@ class SimpleCombinedModel(BaseModel):
         var = self._variability(observed, predicted)
         corr = self._correlation(observed, predicted)
         kge = self._kge(observed, predicted)
+        r2 = self._r2(observed, predicted)
 
-        return rmse, mae, bias, var, corr, kge
+        return rmse, mae, bias, var, corr, kge, r2
 
     def write_report(self, report_directory: Path):
         file_path = report_directory / f"{self.name}.txt"
         
-        rmse, mae, bias, var, corr, kge = self._calculate_objective_functions(self.df)
+        rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
         
         with open(file_path, "w") as f:
             f.write(f"Simple Combined Model Report\n")
@@ -199,6 +200,7 @@ class SimpleCombinedModel(BaseModel):
             f.write(f"Variability Ratio: {var}\n")
             f.write(f"Correlation: {corr}\n")
             f.write(f"KGE: {kge}\n")
+            f.write(f"R Squared: {r2}\n")
 
     
 class SimpleIFCombinedModel(BaseModel):
@@ -594,13 +596,14 @@ class AdvancedCombinedModel(BaseModel):
         var = self._variability(observed, predicted)
         corr = self._correlation(observed, predicted)
         kge = self._kge(observed, predicted)
+        r2 = self._r2(observed, predicted)
 
-        return rmse, mae, bias, var, corr, kge
+        return rmse, mae, bias, var, corr, kge, r2
 
     def write_report(self, report_directory: Path):
         file_path = report_directory / f"{self.name}.txt"
         
-        rmse, mae, bias, var, corr, kge = self._calculate_objective_functions(self.df)
+        rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
         
         with open(file_path, "w") as f:
             f.write(f"Advanced Combined Model Report\n")
@@ -610,3 +613,4 @@ class AdvancedCombinedModel(BaseModel):
             f.write(f"Variability Ratio: {var}\n")
             f.write(f"Correlation: {corr}\n")
             f.write(f"KGE: {kge}\n")
+            f.write(f"R Squared: {r2}\n")

@@ -61,3 +61,6 @@ def read_lab_data() -> pd.DataFrame:
         )
 
     return pd.DataFrame(data_list, columns=column_names)
+
+def read_lab_data_for_monte_carlo() -> pd.DataFrame:
+    raise NotImplementedError
