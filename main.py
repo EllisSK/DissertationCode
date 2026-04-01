@@ -13,6 +13,9 @@ def main():
     args = parser.parse_args()
 
     if args.analysis:
+        fric = read_friction_data()
+        analyse_friction_data(fric)
+
         lab_data = read_lab_data()
         reports_dir =Path("exports/reports")
 

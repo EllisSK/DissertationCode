@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
+import numpy as np
 import pandas as pd
+
 from openpyxl import load_workbook
 from pathlib import Path
 from tqdm import tqdm
@@ -61,6 +63,44 @@ def read_lab_data() -> pd.DataFrame:
         )
 
     return pd.DataFrame(data_list, columns=column_names)
+
+def read_friction_data() -> pd.DataFrame:
+    path = Path("data/ManningsNExperiments.csv")
+
+    df = pd.read_csv(path)
+
+    df = df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])["Depth (mm)"].mean().reset_index()
+
+    return df
+
+def analyse_friction_data(data: pd.DataFrame) -> pd.DataFrame:
+    data["AOD (m)"] = (10000 - data["X Position (mm)"]) * (data["Incline (%)"] / 100)
+    data["Velocity Head (m)"] = np.power((data["Set Flow (l/s)"] / data["Depth (mm)"]), 2) / (2 * 9.81)
+    data["Depth (m)"] = data["Depth (mm)"] / 1000
+
+    data["Total Head (m)"] = data["AOD (m)"] + data["Velocity Head (m)"] + data["Depth (m)"]
+
+    data["X Position (m)"] = data["X Position (mm)"] / 1000
+
+    depths = data.groupby(["Set Flow (l/s)", "Incline (%)"])["Depth (m)"].mean().reset_index()
+
+    def get_head_slope(group):
+        slope, _ = np.polyfit(group["X Position (m)"], group["Total Head (m)"], 1)
+        return slope
+    
+    data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
+
+    data = pd.merge(data, depths, on=["Set Flow (l/s)", "Incline (%)"])
+    
+    data["Composite n"] = np.where(
+        -data["Free Surface Slope"] > 0,
+        (data["Depth (m)"] * np.power(data["Depth (m)"] / (1 + 2 * data["Depth (m)"]), 2/3) * np.sqrt(-data["Free Surface Slope"])) / (data["Set Flow (l/s)"] / 1000),
+        np.nan
+    )
+
+    print(data)
+
+    return data
 
 def read_lab_data_for_monte_carlo() -> pd.DataFrame:
     raise NotImplementedError
