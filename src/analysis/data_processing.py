@@ -92,7 +92,7 @@ def analyse_friction_data(data: pd.DataFrame) -> pd.DataFrame:
 
     data = data.merge(slope_data, on=["Set Flow (l/s)", "Incline (%)"], how="left")
     data["Sf"] = -data["Free Surface Slope"]
-    data["P (m)"] = 2 + (2 * data["Depth (m)"])
+    data["P (m)"] = 1 + (2 * data["Depth (m)"])
 
     data["Composite n"] = np.sqrt((data["Sf"] * np.power(data["Depth (m)"], 10/3)) / (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4/3)))
     
