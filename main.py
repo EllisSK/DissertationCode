@@ -16,6 +16,8 @@ def main():
         fric = read_friction_data()
         analyse_friction_data(fric)
 
+        return
+
         lab_data = read_lab_data()
         reports_dir =Path("exports/reports")
 

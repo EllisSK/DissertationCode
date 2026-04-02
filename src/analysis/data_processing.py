@@ -74,7 +74,7 @@ def read_friction_data() -> pd.DataFrame:
     return df
 
 def analyse_friction_data(data: pd.DataFrame) -> pd.DataFrame:
-    data["AOD (m)"] = (10000 - data["X Position (mm)"]) * (data["Incline (%)"] / 100)
+    data["AOD (m)"] = ((10000 - data["X Position (mm)"]) / 1000) * (data["Incline (%)"] / 100)
     data["Velocity Head (m)"] = np.power((data["Set Flow (l/s)"] / data["Depth (mm)"]), 2) / (2 * 9.81)
     data["Depth (m)"] = data["Depth (mm)"] / 1000
 
@@ -82,23 +82,28 @@ def analyse_friction_data(data: pd.DataFrame) -> pd.DataFrame:
 
     data["X Position (m)"] = data["X Position (mm)"] / 1000
 
-    depths = data.groupby(["Set Flow (l/s)", "Incline (%)"])["Depth (m)"].mean().reset_index()
-
     def get_head_slope(group):
         slope, _ = np.polyfit(group["X Position (m)"], group["Total Head (m)"], 1)
         return slope
     
-    data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
+    slope_data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
 
-    data = pd.merge(data, depths, on=["Set Flow (l/s)", "Incline (%)"])
+    print(slope_data)
+
+    data = data.merge(slope_data, on=["Set Flow (l/s)", "Incline (%)"], how="left")
+    data["Sf"] = -data["Free Surface Slope"]
+    data["P (m)"] = 2 + (2 * data["Depth (m)"])
+
+    data["Composite n"] = np.sqrt((data["Sf"] * np.power(data["Depth (m)"], 10/3)) / (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4/3)))
     
-    data["Composite n"] = np.where(
-        -data["Free Surface Slope"] > 0,
-        (data["Depth (m)"] * np.power(data["Depth (m)"] / (1 + 2 * data["Depth (m)"]), 2/3) * np.sqrt(-data["Free Surface Slope"])) / (data["Set Flow (l/s)"] / 1000),
-        np.nan
-    )
-
     print(data)
+
+    x_vals = (2 * data["Depth (m)"]) / 2
+    y_vals = (data["P (m)"] * np.power(data["Composite n"], 1.5)) / 2
+    slope, intercept = np.polyfit(x_vals, y_vals, 1)
+    
+    print(f"Bed Manning's n: {np.power(intercept, 2/3)}")
+    print(f"Wall Manning's n: {np.power(slope, 2/3)}")
 
     return data
 
