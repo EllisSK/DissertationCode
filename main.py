@@ -13,13 +13,10 @@ def main():
     args = parser.parse_args()
 
     if args.analysis:
-        fric = read_friction_data()
-        analyse_friction_data(fric)
-
-        return
-
-        lab_data = read_lab_data()
+        lab_data = read_barrier_data()
         reports_dir =Path("exports/reports")
+
+        write_friction_report("frictionValues.csv", reports_dir)
 
         simple_sluice_model = SimpleSluiceModel("simpleSluice", lab_data)
         simple_sluice_model.fit()

@@ -9,6 +9,36 @@ from openpyxl import load_workbook
 from pathlib import Path
 from tqdm import tqdm
 
+def scan_data_directory():
+    data_dir = Path("data/") 
+
+    contents = list(data_dir.iterdir())
+
+    if not (data_dir / "BarrierExperiments.csv").exists():
+        if (data_dir / "LabData.xlsx").exists():
+            construct_lab_data_csv()
+        else:
+            # Download from archive
+            pass
+            
+    if not (data_dir / "ManningsNExperiments.csv").exists():
+        # Download from archive
+        pass
+
+def construct_lab_data_csv():
+    path = Path("data/BarrierExperiments.csv")
+    
+    data = read_lab_data()
+
+    data.to_csv(path, index=False)
+
+def parse_float(val):
+    if val is None or str(val).strip().upper() in ("N/A", "NA", ""):
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
 
 def read_lab_data() -> pd.DataFrame:
     path = Path("data/LabData.xlsx")
@@ -17,9 +47,9 @@ def read_lab_data() -> pd.DataFrame:
         "Barrier Setup",
         "Operation Mode",
         "Set Flow (l/s)",
-        "Mean Upstream Depth (mm)",
-        "Mean Downstream Depth (mm)",
-        "Mean Vena Contracta Depth (mm)",
+        "X Position (mm)",
+        "Y Position (mm)",
+        "Depth (mm)",
     ]
 
     book = load_workbook(filename=path, read_only=True, data_only=True)
@@ -30,39 +60,48 @@ def read_lab_data() -> pd.DataFrame:
     for sheet_name in tqdm(config_sheet_names):
         sheet = book[sheet_name]
 
-        raw_us_values = [cell.value for row in sheet["D11:D16"] for cell in row]
-        us_numbers = [v for v in raw_us_values if isinstance(v, (int, float))]
-        if us_numbers:
-            avg_us_val = sum(us_numbers) / len(us_numbers)
-        else:
-            avg_us_val = None
+        barrier_setup = "{}-{}-{}".format(sheet["F2"].value, sheet["F3"].value, sheet["F4"].value)
+        operation_mode = sheet["F5"].value
+        set_flow = parse_float(sheet["B2"].value)
 
-        raw_ds_values = [cell.value for row in sheet["D17:D22"] for cell in row]
-        ds_numbers = [v for v in raw_ds_values if isinstance(v, (int, float))]
-        if ds_numbers:
-            avg_ds_val = sum(ds_numbers) / len(ds_numbers)
-        else:
-            avg_ds_val = None
+        for row in sheet["B11:D25"]:
+            x_pos = parse_float(row[0].value)
+            y_pos = parse_float(row[1].value)
+            depth = parse_float(row[2].value)
 
-        raw_vc_values = [cell.value for row in sheet["D23:D25"] for cell in row]
-        vc_numbers = [v for v in raw_vc_values if isinstance(v, (int, float))]
-        if vc_numbers:
-            avg_vc_val = sum(vc_numbers) / len(vc_numbers)
-        else:
-            avg_vc_val = None
+            if x_pos is None or y_pos is None or depth is None:
+                continue
 
-        data_list.append(
-            {
-                "Barrier Setup": f"{sheet['F2'].value}-{sheet['F3'].value}-{sheet['F4'].value}",
-                "Operation Mode": sheet["F5"].value,
-                "Set Flow (l/s)": sheet["B2"].value,
-                "Mean Upstream Depth (mm)": avg_us_val,
-                "Mean Downstream Depth (mm)": avg_ds_val,
-                "Mean Vena Contracta Depth (mm)": avg_vc_val,
-            }
-        )
+            x_pos += 5000
+
+            data_list.append(
+                {
+                    "Barrier Setup": barrier_setup,
+                    "Operation Mode": operation_mode,
+                    "Set Flow (l/s)": set_flow,
+                    "X Position (mm)": x_pos,
+                    "Y Position (mm)": y_pos,
+                    "Depth (mm)": depth,
+                }
+            )
 
     return pd.DataFrame(data_list, columns=column_names)
+
+def read_barrier_data() -> pd.DataFrame:
+    path = Path("data/BarrierExperiments.csv")
+    
+    df = pd.read_csv(path)
+
+    df = df[df["X Position (mm)"] < 5000]
+    
+    df_mean = df.groupby(
+        ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"], 
+        as_index=False
+    ).agg(
+        **{"Mean Upstream Depth (mm)": ("Depth (mm)", "mean")}
+    )
+    
+    return df_mean
 
 def read_friction_data() -> pd.DataFrame:
     path = Path("data/ManningsNExperiments.csv")
@@ -73,7 +112,7 @@ def read_friction_data() -> pd.DataFrame:
 
     return df
 
-def analyse_friction_data(data: pd.DataFrame) -> pd.DataFrame:
+def analyse_friction_data(data: pd.DataFrame):
     data["AOD (m)"] = ((10000 - data["X Position (mm)"]) / 1000) * (data["Incline (%)"] / 100)
     data["Velocity Head (m)"] = np.power((data["Set Flow (l/s)"] / data["Depth (mm)"]), 2) / (2 * 9.81)
     data["Depth (m)"] = data["Depth (mm)"] / 1000
@@ -88,24 +127,32 @@ def analyse_friction_data(data: pd.DataFrame) -> pd.DataFrame:
     
     slope_data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
 
-    print(slope_data)
-
     data = data.merge(slope_data, on=["Set Flow (l/s)", "Incline (%)"], how="left")
     data["Sf"] = -data["Free Surface Slope"]
     data["P (m)"] = 1 + (2 * data["Depth (m)"])
 
     data["Composite n"] = np.sqrt((data["Sf"] * np.power(data["Depth (m)"], 10/3)) / (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4/3)))
-    
-    print(data)
 
     x_vals = (2 * data["Depth (m)"]) / 2
     y_vals = (data["P (m)"] * np.power(data["Composite n"], 1.5)) / 2
     slope, intercept = np.polyfit(x_vals, y_vals, 1)
-    
-    print(f"Bed Manning's n: {np.power(intercept, 2/3)}")
-    print(f"Wall Manning's n: {np.power(slope, 2/3)}")
 
-    return data
+    bed_n = np.power(intercept, 2/3)
+    wall_n = np.power(slope, 2/3)
+
+    return bed_n, wall_n
+
+import pandas as pd
+from pathlib import Path
+
+def write_friction_report(name: str, path: Path):
+    fric = read_friction_data()
+    
+    data = analyse_friction_data(fric)
+
+    df = pd.DataFrame([data], columns=["Bed", "Wall"])
+
+    df.to_csv(path / name, index=False)
 
 def read_lab_data_for_monte_carlo() -> pd.DataFrame:
     raise NotImplementedError
