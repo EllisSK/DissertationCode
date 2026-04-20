@@ -2,6 +2,4 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-from ._solver_ext import test_connection
-
-__all__ = ["test_connection"]
+from .flume import Flume

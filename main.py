@@ -63,7 +63,8 @@ def main():
         visualisation_1_5(lab_data)
 
     if args.solver:
-        test_connection()
+        test_flume = Flume("", 0.25)
+        test_flume.simulate()
 
 
 if __name__ == "__main__":
