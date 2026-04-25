@@ -218,6 +218,7 @@ class SimpleIFCombinedModel(BaseModel):
         self.orifice.fit()
 
         self.fitted = False
+        self.optimal = np.zeros(3)
 
     def _equation(self, X, IF_sluice, IF_orifice, IF_weir):
         sluice_params = X[:2]
@@ -377,6 +378,7 @@ class SimpleIFCombinedModel(BaseModel):
         self.if_sluice = self.popt[0]
         self.if_orifice = self.popt[1]
         self.if_weir = self.popt[2]
+        self.optimal = self.popt
 
     def plotting_function(self, upstream_depth, barrier_setup):
         return self._equation(self._params_from_setup(barrier_setup, upstream_depth), self.if_sluice, self.if_orifice, self.if_weir)
@@ -400,14 +402,15 @@ class SimpleIFCombinedModel(BaseModel):
         var = self._variability(observed, predicted)
         corr = self._correlation(observed, predicted)
         kge = self._kge(observed, predicted)
+        r2 = self._r2(observed, predicted)
 
-        return rmse, mae, bias, var, corr, kge
+        return rmse, mae, bias, var, corr, kge, r2
 
     def write_report(self, report_directory: Path):
         file_path = report_directory / f"{self.name}.txt"
         
         if self.fitted:
-            rmse, mae, bias, var, corr, kge = self._calculate_objective_functions(self.df)
+            rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
             
             with open(file_path, "w") as f:
                 f.write(f"Interaction Factor Combined Model Report\n")
@@ -423,6 +426,7 @@ class SimpleIFCombinedModel(BaseModel):
                 f.write(f"Variability Ratio: {var}\n")
                 f.write(f"Correlation: {corr}\n")
                 f.write(f"KGE: {kge}\n")
+                f.write(f"R Squared: {r2}\n")
         else:
             raise Exception("Model hasn't been fit yet!")
         

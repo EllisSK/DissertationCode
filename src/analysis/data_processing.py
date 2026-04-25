@@ -1,13 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Ellis Sinclair-Kent
 #
 # SPDX-License-Identifier: GPL-2.0-only
+import warnings
 
 import numpy as np
 import pandas as pd
 
 from openpyxl import load_workbook
 from pathlib import Path
-from tqdm import tqdm
+from tqdm import tqdm, trange
+from scipy.stats import t
 
 def scan_data_directory():
     data_dir = Path("data/") 
@@ -142,9 +144,6 @@ def analyse_friction_data(data: pd.DataFrame):
 
     return bed_n, wall_n
 
-import pandas as pd
-from pathlib import Path
-
 def write_friction_report(name: str, path: Path):
     fric = read_friction_data()
     
@@ -154,5 +153,166 @@ def write_friction_report(name: str, path: Path):
 
     df.to_csv(path / name, index=False)
 
-def read_lab_data_for_monte_carlo() -> pd.DataFrame:
-    raise NotImplementedError
+def run_monte_carlo_analysis(csv_data_path: Path, model, report_path: Path, trials: int = 200000):
+    df = pd.read_csv(csv_data_path)
+    
+    unique_conditions = df[["Barrier Setup", "Operation Mode", "Set Flow (l/s)"]].drop_duplicates()
+    condition_to_flow_samples = {}
+    
+    D = 0.350
+    area = np.pi * (D / 2) ** 2
+    velocity_error_m_s = 0.002
+    flow_error_from_velocity_ls = area * velocity_error_m_s * 1000
+    
+    for _, row in unique_conditions.iterrows():
+        nominal_flow = row["Set Flow (l/s)"]
+        
+        relative_error = 0.002 * nominal_flow
+        total_flow_half_width = relative_error + flow_error_from_velocity_ls
+        
+        samples = np.random.uniform(
+            nominal_flow - total_flow_half_width, 
+            nominal_flow + total_flow_half_width, 
+            size=trials
+        )
+        
+        key = (row["Barrier Setup"], row["Operation Mode"], row["Set Flow (l/s)"])
+        condition_to_flow_samples[key] = samples
+
+    grouped = df.groupby(["Barrier Setup", "Operation Mode", "Set Flow (l/s)", "X Position (mm)"])
+    
+    n_groups = len(grouped)
+    mc_depths = np.zeros((n_groups, trials))
+    
+    group_keys = []
+    for i, (name, group) in enumerate(grouped):
+        group_keys.append(name)
+        n = len(group["Depth (mm)"])
+        mean = group["Depth (mm)"].mean()
+        std = group["Depth (mm)"].std(ddof=1)
+        
+        if n > 1 and std > 0:
+            scale = std / np.sqrt(n)
+            samples = t.rvs(df=n-1, loc=mean, scale=scale, size=trials)
+        else:
+            samples = np.full(trials, mean)
+            
+        mc_depths[i, :] = np.maximum(samples, 0)
+
+    stats_results = {
+        "RMSE": np.zeros(trials),
+        "MAE": np.zeros(trials),
+        "Absolute Bias": np.zeros(trials),
+        "Variability Ratio": np.zeros(trials),
+        "Correlation": np.zeros(trials),
+        "KGE": np.zeros(trials),
+        "R Squared": np.zeros(trials)
+    }
+    
+    has_fit = hasattr(model, "fit") and hasattr(model, "optimal")
+    opt_is_array = False
+    num_coeffs = 1
+    
+    if has_fit:
+        opt_is_array = isinstance(model.optimal, (list, np.ndarray))
+        if opt_is_array:
+            num_coeffs = len(model.optimal)
+            for k in range(num_coeffs):
+                stats_results[f"Optimised Coefficient {k+1}"] = np.zeros(trials)
+        else:
+            stats_results["Optimised Coefficient"] = np.zeros(trials)
+            
+        orig_df = model.df.copy() if hasattr(model, "df") else None
+        orig_optimal = np.copy(model.optimal) if opt_is_array else model.optimal
+        orig_popt = model.popt.copy() if hasattr(model, "popt") else None
+        orig_pcov = model.pcov.copy() if hasattr(model, "pcov") else None
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        
+        for j in trange(trials, desc=f"MC: {model.name}"):
+            trial_rows = []
+            for i, name in enumerate(group_keys):
+                condition_key = (name[0], name[1], name[2])
+                trial_rows.append({
+                    "Barrier Setup": name[0],
+                    "Operation Mode": name[1],
+                    "Set Flow (l/s)": condition_to_flow_samples[condition_key][j],
+                    "X Position (mm)": name[3],
+                    "Y Position (mm)": 0.0,
+                    "Depth (mm)": mc_depths[i, j]
+                })
+            
+            trial_df = pd.DataFrame(trial_rows)
+            trial_df = trial_df[trial_df["X Position (mm)"] < 5000]
+            
+            trial_df = trial_df.groupby(
+                ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"], 
+                as_index=False
+            ).agg(
+                **{"Mean Upstream Depth (mm)": ("Depth (mm)", "mean")}
+            )
+            
+            processed_df = model._create_model_dataframe(trial_df)
+            
+            if has_fit:
+                model.df = processed_df
+                try:
+                    model.fit()
+                    if opt_is_array:
+                        for k in range(num_coeffs):
+                            stats_results[f"Optimised Coefficient {k+1}"][j] = model.optimal[k]
+                    else:
+                        stats_results["Optimised Coefficient"][j] = model.optimal
+                except Exception:
+                    if opt_is_array:
+                        for k in range(num_coeffs):
+                            stats_results[f"Optimised Coefficient {k+1}"][j] = np.nan
+                    else:
+                        stats_results["Optimised Coefficient"][j] = np.nan
+            
+            obj_metrics = model._calculate_objective_functions(processed_df)
+            rmse, mae, bias, var, corr, kge, r_squared = obj_metrics[:7]
+            
+            stats_results["RMSE"][j] = rmse
+            stats_results["MAE"][j] = mae
+            stats_results["Absolute Bias"][j] = bias
+            stats_results["Variability Ratio"][j] = var
+            stats_results["Correlation"][j] = corr
+            stats_results["KGE"][j] = kge
+            stats_results["R Squared"][j] = r_squared
+
+    if has_fit:
+        if orig_df is not None:
+            model.df = orig_df
+        model.optimal = orig_optimal
+        if orig_popt is not None:
+            model.popt = orig_popt
+        if orig_pcov is not None:
+            model.pcov = orig_pcov
+
+    def shortest_coverage_interval(data, alpha=0.95):
+        data = np.sort(data[~np.isnan(data)])
+        n_samples = len(data)
+        
+        if n_samples == 0:
+            return np.nan, np.nan
+            
+        p = int(np.floor(alpha * n_samples))
+        if p == 0:
+            return data[0], data[-1]
+        widths = data[p:] - data[:n_samples - p]
+        min_idx = np.argmin(widths)
+        return data[min_idx], data[min_idx + p]
+
+    file_exists = report_path.exists()
+    mode = "a" if file_exists else "w"
+    
+    with open(report_path, mode) as f:
+        if file_exists:
+            f.write("\n")
+        f.write("Monte Carlo Analysis (95% CI Shortest Coverage Interval)\n")
+            
+        for stat_name, data in stats_results.items():
+            lower, upper = shortest_coverage_interval(data, 0.95)
+            f.write(f"{stat_name}: [{lower}, {upper}]\n")
