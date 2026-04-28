@@ -19,6 +19,8 @@ def main():
 
         write_friction_report("frictionValues.csv", reports_dir)
 
+        return
+
         simple_sluice_model = SimpleSluiceModel("simpleSluice", lab_data)
         simple_sluice_model.fit()
         simple_sluice_model.write_report(reports_dir)
@@ -73,8 +75,7 @@ def main():
         visualisation_1_5(lab_data)
 
     if args.solver:
-        test_flume = Flume("", 0.25)
-        test_flume.simulate()
+        reproduce_barrier_experiments()
 
 
 if __name__ == "__main__":

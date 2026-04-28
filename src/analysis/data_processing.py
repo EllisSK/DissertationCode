@@ -139,7 +139,7 @@ def analyse_friction_data(data: pd.DataFrame):
     y_vals = (data["P (m)"] * np.power(data["Composite n"], 1.5)) / 2
     slope, intercept = np.polyfit(x_vals, y_vals, 1)
 
-    bed_n = np.power(intercept, 2/3)
+    bed_n = np.power(2 * intercept, 2/3)
     wall_n = np.power(slope, 2/3)
 
     return bed_n, wall_n
