@@ -147,3 +147,98 @@ def visualisation_1_7(measured_friction_data: pd.DataFrame):
         fig = create_friction_depth_diagram(incline_pct, x_profile, depth_profile, point_data, title)
         fig.savefig(output_directory / f"{file_path.stem}.svg")
         plt.close(fig)
+
+def visualisation_1_8() -> go.Figure:
+    df = pd.read_csv(Path("data/ManningsNExperiments.csv"))
+    data = df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])["Depth (mm)"].mean().reset_index()
+
+    data["AOD (m)"] = ((10000 - data["X Position (mm)"]) / 1000) * (data["Incline (%)"] / 100)
+    data["Velocity Head (m)"] = np.power((data["Set Flow (l/s)"] / data["Depth (mm)"]), 2) / (2 * 9.81)
+    data["Depth (m)"] = data["Depth (mm)"] / 1000
+    data["Total Head (m)"] = data["AOD (m)"] + data["Velocity Head (m)"] + data["Depth (m)"]
+    data["X Position (m)"] = data["X Position (mm)"] / 1000
+
+    def get_head_slope(group):
+        slope, _ = np.polyfit(group["X Position (m)"], group["Total Head (m)"], 1)
+        return slope
+    
+    slope_data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
+    data = data.merge(slope_data, on=["Set Flow (l/s)", "Incline (%)"], how="left")
+    
+    data["Sf"] = -data["Free Surface Slope"]
+    data["P (m)"] = 1 + (2 * data["Depth (m)"])
+    data["Composite n"] = np.sqrt((data["Sf"] * np.power(data["Depth (m)"], 10/3)) / 
+                                  (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4/3)))
+
+    x_vals = data["Depth (m)"]
+    y_vals = (data["P (m)"] * np.power(data["Composite n"], 1.5)) / 2
+
+    valid_idx = ~np.isnan(x_vals) & ~np.isnan(y_vals)
+    x_vals = x_vals[valid_idx]
+    y_vals = y_vals[valid_idx]
+
+    slope, intercept = np.polyfit(x_vals, y_vals, 1)
+
+    ci_df = pd.read_csv(Path("exports/reports/frictionCIValues.csv"))
+    lower_bed = ci_df.loc[ci_df["Bound"] == "Lower", "Bed"].values[0]
+    upper_bed = ci_df.loc[ci_df["Bound"] == "Upper", "Bed"].values[0]
+    lower_wall = ci_df.loc[ci_df["Bound"] == "Lower", "Wall"].values[0]
+    upper_wall = ci_df.loc[ci_df["Bound"] == "Upper", "Wall"].values[0]
+
+    x_line = np.linspace(0, x_vals.max() * 1.1, 100)
+    y_line_nominal = slope * x_line + intercept
+    y_line_lower = (lower_wall ** 1.5) * x_line + (lower_bed ** 1.5) / 2
+    y_line_upper = (upper_wall ** 1.5) * x_line + (upper_bed ** 1.5) / 2
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=np.concatenate([x_line, x_line[::-1]]),
+        y=np.concatenate([y_line_upper, y_line_lower[::-1]]),
+        fill="toself",
+        fillcolor="rgba(0, 141, 255, 0.2)",
+        line={"color": "rgba(255,255,255,0)"},
+        hoverinfo="skip",
+        showlegend=True,
+        name="95% Confidence Interval"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=x_line,
+        y=y_line_nominal,
+        mode="lines",
+        line={"color": "#d83034", "width": 3, "dash": "dash"},
+        name="Regression Fit"
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=x_vals,
+        y=y_vals,
+        mode="markers",
+        marker={"symbol": "x", "color": "#008dff"},
+        name="Variables Derived from Measurements"
+    ))
+
+    fig.update_layout(
+        title="Friction Regression Fit with 95% CI",
+        xaxis={
+            "title": "Regression Variable X: Depth (m)",
+            "range": [0, x_vals.max() * 1.1]
+        },
+        yaxis={
+            "title": "Regression Variable Y",
+            "range": [0, y_vals.max() * 1.1],
+            "exponentformat": "power",
+            "tickfont": {"size": 24}
+        },
+        legend={
+            "yanchor": "top",
+            "y": 0.99,
+            "xanchor": "left",
+            "x": 0.01,
+            "font": {"size": 32}
+        }
+    )
+
+    save_figure(fig, "FrictionFit")
+    return fig

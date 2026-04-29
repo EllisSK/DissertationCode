@@ -17,6 +17,10 @@ def main():
         barrier_csv = Path("data/BarrierExperiments.csv")
         reports_dir = Path("exports/reports")
 
+        validate_barrier_experiments(reports_dir)
+        validate_friction_experiments(reports_dir)
+        return
+
         write_friction_report("frictionValues.csv", reports_dir)
         run_friction_monte_carlo_analysis()
 
@@ -64,6 +68,9 @@ def main():
         lab_data = read_barrier_data()
         raw_lab_data = pd.read_csv(Path("data/BarrierExperiments.csv"))
         fric_data = pd.read_csv(Path("data/ManningsNExperiments.csv"))
+
+        visualisation_1_8()
+        return
 
         visualisation_1_7(fric_data)
         return
