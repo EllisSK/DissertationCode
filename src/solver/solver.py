@@ -269,17 +269,17 @@ def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_f
     def barrier_face_fluxes(eta_L, eta_R, z_int):
         h_L = max(float(eta_L - z_int), 0.0)
         h_R = max(float(eta_R - z_int), 0.0)
-
-        q_b = float(barrier_function(max(h_L, 1e-9), h_R))
+        q_b, M_jet = barrier_function(max(h_L, 1e-9), h_R)
+        q_b = float(q_b)
+        M_jet = float(M_jet)
         h_L_safe = max(h_L, 1e-6)
-        h_R_safe = max(h_R, 1e-6)
         F_L = np.array([
             q_b,
             q_b * q_b / h_L_safe + 0.5 * g * (eta_L * eta_L - 2.0 * eta_L * z_int),
         ])
         F_R = np.array([
             q_b,
-            1.0 * (q_b * q_b / h_R_safe + 0.5 * g * (eta_R * eta_R - 2.0 * eta_R * z_int)),
+            M_jet + 0.5 * g * (eta_R * eta_R - 2.0 * eta_R * z_int),
         ])
         return F_L, F_R
 

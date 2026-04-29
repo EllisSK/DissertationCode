@@ -316,3 +316,103 @@ def run_monte_carlo_analysis(csv_data_path: Path, model, report_path: Path, tria
         for stat_name, data in stats_results.items():
             lower, upper = shortest_coverage_interval(data, 0.95)
             f.write(f"{stat_name}: [{lower}, {upper}]\n")
+
+def run_friction_monte_carlo_analysis(trials: int = 200000):
+    csv_data_path = Path("data/ManningsNExperiments.csv")
+    df = pd.read_csv(csv_data_path)
+    
+    unique_conditions = df[["Set Flow (l/s)", "Incline (%)"]].drop_duplicates()
+    condition_to_flow_samples = {}
+    
+    D = 0.350
+    area = np.pi * (D / 2) ** 2
+    velocity_error_m_s = 0.002
+    flow_error_from_velocity_ls = area * velocity_error_m_s * 1000
+    
+    for _, row in unique_conditions.iterrows():
+        nominal_flow = row["Set Flow (l/s)"]
+        
+        relative_error = 0.002 * nominal_flow
+        total_flow_half_width = relative_error + flow_error_from_velocity_ls
+        
+        samples = np.random.uniform(
+            nominal_flow - total_flow_half_width, 
+            nominal_flow + total_flow_half_width, 
+            size=trials
+        )
+        
+        key = (row["Set Flow (l/s)"], row["Incline (%)"])
+        condition_to_flow_samples[key] = samples
+
+    grouped = df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])
+    
+    n_groups = len(grouped)
+    mc_depths = np.zeros((n_groups, trials))
+    
+    group_keys = []
+    for i, (name, group) in enumerate(grouped):
+        group_keys.append(name)
+        n = len(group["Depth (mm)"])
+        mean = group["Depth (mm)"].mean()
+        std = group["Depth (mm)"].std(ddof=1)
+        
+        if n > 1 and std > 0:
+            scale = std / np.sqrt(n)
+            samples = t.rvs(df=n-1, loc=mean, scale=scale, size=trials)
+        else:
+            samples = np.full(trials, mean)
+            
+        mc_depths[i, :] = np.maximum(samples, 0)
+        
+    bed_n_results = np.zeros(trials)
+    wall_n_results = np.zeros(trials)
+    
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        
+        for j in trange(trials, desc="MC: Friction Data"):
+            trial_rows = []
+            for i, name in enumerate(group_keys):
+                condition_key = (name[0], name[1])
+                trial_rows.append({
+                    "Set Flow (l/s)": condition_to_flow_samples[condition_key][j],
+                    "Incline (%)": name[1],
+                    "X Position (mm)": name[2],
+                    "Depth (mm)": mc_depths[i, j]
+                })
+            
+            trial_df = pd.DataFrame(trial_rows)
+            
+            try:
+                bed_n, wall_n = analyse_friction_data(trial_df)
+                bed_n_results[j] = bed_n
+                wall_n_results[j] = wall_n
+            except Exception:
+                bed_n_results[j] = np.nan
+                wall_n_results[j] = np.nan
+
+    def shortest_coverage_interval(data, alpha=0.95):
+        data = np.sort(data[~np.isnan(data)])
+        n_samples = len(data)
+        
+        if n_samples == 0:
+            return np.nan, np.nan
+            
+        p = int(np.floor(alpha * n_samples))
+        if p == 0:
+            return data[0], data[-1]
+        widths = data[p:] - data[:n_samples - p]
+        min_idx = np.argmin(widths)
+        return data[min_idx], data[min_idx + p]
+        
+    bed_lower, bed_upper = shortest_coverage_interval(bed_n_results, 0.95)
+    wall_lower, wall_upper = shortest_coverage_interval(wall_n_results, 0.95)
+    
+    output_df = pd.DataFrame({
+        "Bound": ["Lower", "Upper"],
+        "Bed": [bed_lower, bed_upper],
+        "Wall": [wall_lower, wall_upper]
+    })
+    
+    output_path = Path("exports/reports/frictionCIValues.csv")
+    output_df.to_csv(output_path, index=False)

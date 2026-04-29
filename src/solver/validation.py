@@ -11,9 +11,6 @@ from .flume import Flume
 def reproduce_friction_experiments():
     path = Path("data/ManningsNExperiments.csv")
     df = pd.read_csv(path)
-
-    
-    target_x_mm = [2500, 5000, 7500]
     
     dx = 0.1
     length = 12.5
@@ -22,17 +19,10 @@ def reproduce_friction_experiments():
     
     grouped = df.groupby(["Set Flow (l/s)", "Incline (%)"])
     
+    out_dir = Path("exports/numerical/friction")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
     for (flow_ls, incline_pct), group in grouped:
-        print(f"\n--- Flow: {flow_ls} l/s | Incline: {incline_pct}% ---")
-        
-        exp_depths = []
-        for x_loc in target_x_mm:
-            avg_depth = group[group["X Position (mm)"] == x_loc]["Depth (mm)"].mean()
-            exp_depths.append(avg_depth)
-            
-        print(f"Experimental Average Depths (mm) at X={target_x_mm}:")
-        print(f"  {[round(d, 2) for d in exp_depths]}")
-        
         flow_m3s = flow_ls / 1000.0
         incline_fraction = incline_pct / 100.0
         
@@ -41,23 +31,24 @@ def reproduce_friction_experiments():
             profile = flume.simulate()
             
             eta = profile[1:-1, 0]
+            velocity = profile[1:-1, 1] 
             
             zb = -incline_fraction * x_vals
             
             depth_m = np.maximum(eta - zb, 0.0)
             depth_mm = depth_m * 1000.0
             
-            sim_depths = []
-            for x_loc in target_x_mm:
-                x_loc_m = x_loc / 1000.0
-                depth_at_x = np.interp(x_loc_m, x_vals, depth_mm)
-                sim_depths.append(depth_at_x)
-                
-            print(f"Solver Predicted Depths (mm) at X={target_x_mm}:")
-            print(f"  {[round(d, 2) for d in sim_depths]}")
+            results_df = pd.DataFrame({
+                "X Position (m)": x_vals,
+                "Depth (mm)": depth_mm,
+                "Velocity (m/s)": velocity
+            })
             
+            filename = f"{int(incline_pct * 10)}-{int(flow_ls)}.csv"
+            results_df.to_csv(out_dir / filename, index=False)
+                
         except Exception as e:
-            print(f"  Solver failed to run. Ensure that the correct paths (like frictionValues.csv) are accessible. Error: {e}")
+            print(f"Solver failed to run for Flow: {flow_ls}, Incline: {incline_pct}. Error: {e}")
 
 def reproduce_barrier_experiments():
     path = Path("data/BarrierExperiments.csv")
@@ -72,19 +63,10 @@ def reproduce_barrier_experiments():
     
     incline_fraction = 0.0
     
+    out_dir = Path("exports/numerical/barriers")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
     for (barrier_setup, flow_ls), group in grouped:
-        print(f"\n--- Barrier Setup: {barrier_setup} | Flow: {flow_ls} l/s ---")
-        
-        target_x_mm = sorted(group["X Position (mm)"].unique())
-        
-        exp_depths = []
-        for x_loc in target_x_mm:
-            avg_depth = group[group["X Position (mm)"] == x_loc]["Depth (mm)"].mean()
-            exp_depths.append(avg_depth)
-            
-        print(f"Experimental Average Depths (mm) at X={target_x_mm}:")
-        print(f"  {[round(d, 2) for d in exp_depths]}")
-        
         flow_m3s = flow_ls / 1000.0
         
         try:
@@ -92,19 +74,20 @@ def reproduce_barrier_experiments():
             profile = flume.simulate()
             
             eta = profile[1:-1, 0]
+            velocity = profile[1:-1, 1] 
             
             zb = -incline_fraction * x_vals
             depth_m = np.maximum(eta - zb, 0.0)
             depth_mm = depth_m * 1000.0
             
-            sim_depths = []
-            for x_loc in target_x_mm:
-                x_loc_m = x_loc / 1000.0
-                depth_at_x = np.interp(x_loc_m, x_vals, depth_mm)
-                sim_depths.append(depth_at_x)
-                
-            print(f"Solver Predicted Depths (mm) at X={target_x_mm}:")
-            print(f"  {[round(d, 2) for d in sim_depths]}")
+            results_df = pd.DataFrame({
+                "X Position (m)": x_vals,
+                "Depth (mm)": depth_mm,
+                "Velocity (m/s)": velocity
+            })
             
+            filename = f"{barrier_setup}-{flow_ls}.csv"
+            results_df.to_csv(out_dir / filename, index=False)
+                
         except Exception as e:
-            print(f"  Solver failed to run. Ensure that the correct paths (like frictionValues.csv) are accessible. Error: {e}")
+            print(f"Solver failed to run for Barrier Setup: {barrier_setup}, Flow: {flow_ls}. Error: {e}")

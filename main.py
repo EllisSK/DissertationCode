@@ -18,8 +18,7 @@ def main():
         reports_dir = Path("exports/reports")
 
         write_friction_report("frictionValues.csv", reports_dir)
-
-        return
+        run_friction_monte_carlo_analysis()
 
         simple_sluice_model = SimpleSluiceModel("simpleSluice", lab_data)
         simple_sluice_model.fit()
@@ -63,6 +62,10 @@ def main():
 
     if args.visualisation:
         lab_data = read_barrier_data()
+        raw_lab_data = pd.read_csv(Path("data/BarrierExperiments.csv"))
+
+        visualisation_1_6(raw_lab_data)
+        return
 
         visualisation_1_1(lab_data)
 
@@ -75,7 +78,9 @@ def main():
         visualisation_1_5(lab_data)
 
     if args.solver:
-        reproduce_barrier_experiments()
+        reproduce_friction_experiments()
+
+        #reproduce_barrier_experiments()
 
 
 if __name__ == "__main__":

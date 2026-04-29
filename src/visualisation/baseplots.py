@@ -69,8 +69,8 @@ def add_function_to_plot(
 
     return fig
 
-def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_profile: np.ndarray, title: str = ""):
-    FLUME_LENGTH = 10000
+def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_profile: np.ndarray, point_data: pd.DataFrame = None, title: str = ""):
+    FLUME_LENGTH = 12500
     FLUME_DEPTH = 800
     BARRIER_WIDTH = 15
     BARRIER_X_CENTER = 5000
@@ -86,9 +86,13 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     ax.plot(us_x, us_profile, color=water_colour)
     ax.fill_between(us_x, us_profile, 0, color=water_colour)
 
-    ds_x = np.linspace(5000, 10000, num=5000)
+    ds_x = np.linspace(5000, 12500, num=7500)
     ax.plot(ds_x, ds_profile, color=water_colour)
     ax.fill_between(ds_x, ds_profile, 0, color=water_colour)
+
+    if point_data is not None and not point_data.empty:
+        if "X Position (mm)" in point_data.columns and "Depth (mm)" in point_data.columns:
+            ax.scatter(point_data["X Position (mm)"], point_data["Depth (mm)"], color="red", zorder=20, s=15, label="Measured Depth", marker="x")
 
     gaps = list(map(int, barrier_setup.split("-")))
     current_y = gaps[0]
@@ -110,7 +114,6 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     ax.set_ylim(0, FLUME_DEPTH)
 
     ax.yaxis.set_major_locator(MultipleLocator(100))
-    
     ax.yaxis.set_minor_locator(MultipleLocator(25))
 
     def y_label_filter(x, pos):
@@ -120,11 +123,10 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     ax.yaxis.set_major_formatter(FuncFormatter(y_label_filter))
 
     ax.xaxis.set_major_locator(MultipleLocator(1000))
-
     ax.xaxis.set_minor_locator(MultipleLocator(100))
 
     def x_label_filter(x, pos):
-        if x in [0, 5000, 10000]:
+        if x in [0, 5000, 12500]:
             return f"{int(x)}"
         return ""
     ax.xaxis.set_major_formatter(FuncFormatter(x_label_filter))
@@ -137,5 +139,8 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
 
     plt.xlabel("Position (mm)", fontname="Arial", fontdict={"size":11})
     plt.ylabel("Depth (mm)", fontname="Arial", fontdict={"size":11})
+
+    if point_data is not None and not point_data.empty and "X Position (mm)" in point_data.columns:
+        ax.legend(loc="upper right", prop={"family": "Arial", "size": 9})
 
     return fig
