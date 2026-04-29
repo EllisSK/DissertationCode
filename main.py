@@ -63,9 +63,12 @@ def main():
     if args.visualisation:
         lab_data = read_barrier_data()
         raw_lab_data = pd.read_csv(Path("data/BarrierExperiments.csv"))
+        fric_data = pd.read_csv(Path("data/ManningsNExperiments.csv"))
+
+        visualisation_1_7(fric_data)
+        return
 
         visualisation_1_6(raw_lab_data)
-        return
 
         visualisation_1_1(lab_data)
 

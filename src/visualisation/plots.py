@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
+import re
+
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -107,5 +109,41 @@ def visualisation_1_6(lab_data: pd.DataFrame):
             point_data = point_data.groupby("X Position (mm)", as_index=False)["Depth (mm)"].mean()
         
         fig = create_barrier_depth_diagram(barrier_setup, us_profile, ds_profile, point_data, title)
+        fig.savefig(output_directory / f"{file_path.stem}.svg")
+        plt.close(fig)
+
+def visualisation_1_7(measured_friction_data: pd.DataFrame):
+    data_directory = Path("exports/numerical/friction")
+    output_directory = Path("exports/figures/numerical/friction/")
+    output_directory.mkdir(parents=True, exist_ok=True)
+    
+    file_paths = []
+    for p in data_directory.glob("*.csv"):
+        if re.match(r"^\d+-\d+(?:\.\d+)?\.csv$", p.name):
+            file_paths.append(p)
+            
+    for file_path in tqdm(file_paths):
+        parts = file_path.stem.split("-")
+        incline_pct = float(parts[0]) / 10.0
+        flow_rate = float(parts[1])
+        
+        df = pd.read_csv(file_path)
+        x_mm = df["X Position (m)"].values * 1000
+        depth = df["Depth (mm)"].values
+        
+        x_profile = np.linspace(0, 12500, num=12500)
+        depth_profile = np.interp(x_profile, x_mm, depth)
+        
+        title = f"Friction Experiment | Incline: {incline_pct}% | Flow: {flow_rate} l/s"
+        
+        point_data = measured_friction_data[
+            (measured_friction_data["Incline (%)"] == incline_pct) & 
+            (measured_friction_data["Set Flow (l/s)"] == flow_rate)
+        ]
+        
+        if not point_data.empty and "X Position (mm)" in point_data.columns and "Depth (mm)" in point_data.columns:
+            point_data = point_data.groupby("X Position (mm)", as_index=False)["Depth (mm)"].mean()
+        
+        fig = create_friction_depth_diagram(incline_pct, x_profile, depth_profile, point_data, title)
         fig.savefig(output_directory / f"{file_path.stem}.svg")
         plt.close(fig)
