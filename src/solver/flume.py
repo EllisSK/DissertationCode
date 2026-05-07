@@ -115,7 +115,6 @@ class Flume:
             
             M_total = np.zeros_like(h_arr)
 
-            # Sluice: jet thickness = Cc * gap, V = q/(Cc*gap)
             if gap1 > 0:
                 h_c_sluice = coeff_contraction * sluice_gap
                 M_total += np.divide(
@@ -124,19 +123,16 @@ class Flume:
                     where=h_c_sluice > 1e-9,
                 )
 
-            # Orifice 1 (gap2 between plank1_top and plank2_bottom)
             gap_o1 = plank2_bottom - plank1_top
             if gap_o1 > 0:
                 h_c_o1 = coeff_contraction * gap_o1
                 M_total += q_orifice1 * q_orifice1 / h_c_o1
 
-            # Orifice 2 (gap3 between plank2_top and plank3_bottom)
             gap_o2 = plank3_bottom - plank2_top
             if gap_o2 > 0:
                 h_c_o2 = coeff_contraction * gap_o2
                 M_total += q_orifice2 * q_orifice2 / h_c_o2
 
-            # Weir: critical depth h_c = (q²/g)^(1/3), V_c = q/h_c, M = q²/h_c
             h_c_weir_safe = np.where(q_weir > 1e-9, np.power(q_weir * q_weir / g, 1/3), 1.0)
             M_total += np.divide(
                 q_weir * q_weir, h_c_weir_safe,

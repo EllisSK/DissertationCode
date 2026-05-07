@@ -50,10 +50,7 @@ def reproduce_friction_experiments():
         except Exception as e:
             print(f"Solver failed to run for Flow: {flow_ls}, Incline: {incline_pct}. Error: {e}")
 
-def reproduce_barrier_experiments():
-    path = Path("data/BarrierExperiments.csv")
-    df = pd.read_csv(path)
-    
+def reproduce_barrier_experiments(df: pd.DataFrame):
     dx = 0.1
     length = 12.5
     N = int(length / dx)

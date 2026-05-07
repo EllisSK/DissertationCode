@@ -126,7 +126,7 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     ax.xaxis.set_minor_locator(MultipleLocator(100))
 
     def x_label_filter(x, pos):
-        if x in [0, 5000, 12500]:
+        if x in [0, 5000, 12000]:
             return f"{int(x)}"
         return ""
     ax.xaxis.set_major_formatter(FuncFormatter(x_label_filter))
@@ -187,7 +187,7 @@ def create_friction_depth_diagram(incline: float, x_profile: np.ndarray, depth_p
     ax.xaxis.set_minor_locator(MultipleLocator(100))
 
     def x_label_filter(x, pos):
-        if x in [0, 5000, 12500]:
+        if x in [0, 5000, 12000]:
             return f"{int(x)}"
         return ""
     ax.xaxis.set_major_formatter(FuncFormatter(x_label_filter))

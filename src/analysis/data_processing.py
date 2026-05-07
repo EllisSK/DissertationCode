@@ -153,9 +153,7 @@ def write_friction_report(name: str, path: Path):
 
     df.to_csv(path / name, index=False)
 
-def run_monte_carlo_analysis(csv_data_path: Path, model, report_path: Path, trials: int = 200000):
-    df = pd.read_csv(csv_data_path)
-    
+def run_monte_carlo_analysis(df: pd.DataFrame, model, report_path: Path, trials: int = 200000):
     unique_conditions = df[["Barrier Setup", "Operation Mode", "Set Flow (l/s)"]].drop_duplicates()
     condition_to_flow_samples = {}
     
@@ -416,3 +414,15 @@ def run_friction_monte_carlo_analysis(trials: int = 200000):
     
     output_path = Path("exports/reports/frictionCIValues.csv")
     output_df.to_csv(output_path, index=False)
+
+def remove_submerged(df: pd.DataFrame) -> pd.DataFrame:
+    submerged_path = Path("data/submergedConfigurations.csv")
+    submerged_df = pd.read_csv(submerged_path)
+    
+    match_keys = ["Barrier Setup", "Set Flow (l/s)"]
+    submerged_configs = submerged_df[match_keys].drop_duplicates()
+    
+    merged_df = df.merge(submerged_configs, on=match_keys, how="left", indicator=True)
+    filtered_df = merged_df[merged_df["_merge"] == "left_only"].drop(columns=["_merge"])
+    
+    return filtered_df

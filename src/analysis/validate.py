@@ -51,10 +51,7 @@ def validate_friction_experiments(report_directory: Path):
         f.write(f"KGE: {kge}\n")
         f.write(f"R Squared: {r2}\n")
 
-def validate_barrier_experiments(report_directory: Path):
-    path = Path("data/BarrierExperiments.csv")
-    df = pd.read_csv(path)
-    
+def validate_barrier_experiments(df:pd.DataFrame, report_directory: Path):
     observed_all = []
     predicted_all = []
     
