@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Ellis Sinclair-Kent
+#
+# SPDX-License-Identifier: GPL-2.0-only
+
 def rmse(observed, predicted):
     return ((predicted - observed) ** 2).mean() ** 0.5
 
