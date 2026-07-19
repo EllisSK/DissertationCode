@@ -2,17 +2,33 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
+"""Figure generation for the dissertation, numbered as visualisation_1_x."""
+
 import re
+from pathlib import Path
 
-import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
-
-from .baseplots import *
-from .io import *
-from src.analysis import *
+import pandas as pd
+import plotly.graph_objects as go
 from tqdm import tqdm
+
+from src.analysis import (
+    AdvancedCombinedModel,
+    SimpleCombinedModel,
+    SimpleIFCombinedModel,
+    compute_friction_regression_data,
+    friction_regression_variables,
+    read_friction_data,
+)
+
+from .baseplots import (
+    add_function_to_plot,
+    create_barrier_depth_diagram,
+    create_flow_us_depth_plot,
+    create_friction_depth_diagram,
+)
+from .io import save_figure
 
 
 def visualisation_1_1(lab_data: pd.DataFrame):
@@ -56,12 +72,6 @@ def visualisation_1_3(lab_data: pd.DataFrame):
         max_us_depth = simple_combined_model.df[simple_combined_model.df["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"].max()/1000
         add_function_to_plot(us_depth_fig, simple_combined_model.plotting_function, (min_us_depth, max_us_depth), 0.001, f"{setup} Model", 1000, 1, setup)
         save_figure(us_depth_fig, setup, "SimpleCombinedAllSetups")
-
-def visualisation_1_4():
-    us_profile = np.linspace(280, 280, num=5000)
-    ds_profile = np.concatenate([np.full(1000, 61), 120.5 - 59.5 * np.cos(np.linspace(0, np.pi, 500)), np.full(3500, 180)])
-    fig = create_barrier_depth_diagram("100-100-100", us_profile, ds_profile, "Test Plot - Sluice Flow Example")
-    fig.savefig("exports/figures/barriertest.svg")
 
 def visualisation_1_5(lab_data: pd.DataFrame):
     simple_combined_model = AdvancedCombinedModel("advancedCombined", lab_data)
@@ -149,29 +159,8 @@ def visualisation_1_7(measured_friction_data: pd.DataFrame):
         plt.close(fig)
 
 def visualisation_1_8() -> go.Figure:
-    df = pd.read_csv(Path("data/ManningsNExperiments.csv"))
-    data = df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])["Depth (mm)"].mean().reset_index()
-
-    data["AOD (m)"] = ((10000 - data["X Position (mm)"]) / 1000) * (data["Incline (%)"] / 100)
-    data["Velocity Head (m)"] = np.power((data["Set Flow (l/s)"] / data["Depth (mm)"]), 2) / (2 * 9.81)
-    data["Depth (m)"] = data["Depth (mm)"] / 1000
-    data["Total Head (m)"] = data["AOD (m)"] + data["Velocity Head (m)"] + data["Depth (m)"]
-    data["X Position (m)"] = data["X Position (mm)"] / 1000
-
-    def get_head_slope(group):
-        slope, _ = np.polyfit(group["X Position (m)"], group["Total Head (m)"], 1)
-        return slope
-    
-    slope_data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
-    data = data.merge(slope_data, on=["Set Flow (l/s)", "Incline (%)"], how="left")
-    
-    data["Sf"] = -data["Free Surface Slope"]
-    data["P (m)"] = 1 + (2 * data["Depth (m)"])
-    data["Composite n"] = np.sqrt((data["Sf"] * np.power(data["Depth (m)"], 10/3)) / 
-                                  (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4/3)))
-
-    x_vals = data["Depth (m)"]
-    y_vals = (data["P (m)"] * np.power(data["Composite n"], 1.5)) / 2
+    data = compute_friction_regression_data(read_friction_data())
+    x_vals, y_vals = friction_regression_variables(data)
 
     valid_idx = ~np.isnan(x_vals) & ~np.isnan(y_vals)
     x_vals = x_vals[valid_idx]

@@ -2,15 +2,16 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-import plotly.express as px
-import plotly.graph_objects as go
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from matplotlib.ticker import MultipleLocator, FuncFormatter
+"""Reusable figure builders for the experiment and simulation plots."""
 
 from typing import Callable
+
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
 def create_flow_us_depth_plot(df: pd.DataFrame, setups: list[str], title: str = "Barrier Flow for Different Geometric Configurations") -> go.Figure:

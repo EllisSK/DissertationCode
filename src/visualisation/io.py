@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-import os
 from pathlib import Path
+
 import plotly.graph_objects as go
 
 
