@@ -21,3 +21,8 @@ class CustomParser(ArgumentParser):
             action="store_true",
             help="Run the lab data solver script",
         )
+        self.add_argument(
+            "--paper",
+            action="store_true",
+            help="Regenerate the research paper figures",
+        )

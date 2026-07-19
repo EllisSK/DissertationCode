@@ -27,6 +27,7 @@ from src.analysis import (
 from src.cli import CustomParser
 from src.solver import reproduce_barrier_experiments, reproduce_friction_experiments
 from src.visualisation import (
+    generate_paper_figures,
     visualisation_1_1,
     visualisation_1_2,
     visualisation_1_3,
@@ -114,6 +115,9 @@ def main():
 
     if args.solver:
         run_solver()
+
+    if args.paper:
+        generate_paper_figures()
 
 
 if __name__ == "__main__":

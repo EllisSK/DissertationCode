@@ -70,16 +70,20 @@ def add_function_to_plot(
 
     return fig
 
-def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_profile: np.ndarray, point_data: pd.DataFrame = None, title: str = ""):
+def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_profile: np.ndarray, point_data: pd.DataFrame = None, title: str = "", ax: plt.Axes = None):
     FLUME_LENGTH = 12500
     FLUME_DEPTH = 800
     BARRIER_WIDTH = 15
     BARRIER_X_CENTER = 5000
 
-    fig_width_in = 15.92 * 0.393701
-    fig_height_in = (9.84 * 0.393701) / 2
+    standalone = ax is None
+    if standalone:
+        fig_width_in = 15.92 * 0.393701
+        fig_height_in = (9.84 * 0.393701) / 2
 
-    fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in))
+        fig, ax = plt.subplots(figsize=(fig_width_in, fig_height_in))
+    else:
+        fig = ax.figure
 
     water_colour = "aqua"
 
@@ -135,11 +139,14 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     ax.tick_params(which="major", length=7)
     ax.tick_params(which="minor", length=3)
 
-    plt.subplots_adjust(top=0.85, bottom=0.25)
-    fig.text(0.02, 0.98, title, ha="left", va="top", fontweight="bold", fontsize=11)
+    if standalone:
+        plt.subplots_adjust(top=0.85, bottom=0.25)
+        fig.text(0.02, 0.98, title, ha="left", va="top", fontweight="bold", fontsize=11)
+    elif title:
+        ax.set_title(title, fontname="Arial", fontweight="bold", fontsize=10, loc="left")
 
-    plt.xlabel("Position (mm)", fontname="Arial", fontdict={"size":11})
-    plt.ylabel("Depth (mm)", fontname="Arial", fontdict={"size":11})
+    ax.set_xlabel("Position (mm)", fontname="Arial", fontsize=11)
+    ax.set_ylabel("Depth (mm)", fontname="Arial", fontsize=11)
 
     if point_data is not None and not point_data.empty and "X Position (mm)" in point_data.columns:
         ax.legend(loc="upper right", prop={"family": "Arial", "size": 9})

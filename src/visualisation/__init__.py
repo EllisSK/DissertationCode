@@ -9,6 +9,7 @@ from .baseplots import (
     create_friction_depth_diagram,
 )
 from .io import save_figure
+from .paper import generate_paper_figures
 from .plots import (
     visualisation_1_1,
     visualisation_1_2,
@@ -28,6 +29,7 @@ __all__ = [
     "create_custom_template",
     "create_flow_us_depth_plot",
     "create_friction_depth_diagram",
+    "generate_paper_figures",
     "save_figure",
     "visualisation_1_1",
     "visualisation_1_2",
