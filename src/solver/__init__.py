@@ -3,4 +3,10 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 from .flume import Flume
-from .validation import *
+from .validation import reproduce_barrier_experiments, reproduce_friction_experiments
+
+__all__ = [
+    "Flume",
+    "reproduce_barrier_experiments",
+    "reproduce_friction_experiments",
+]

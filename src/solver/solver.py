@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-import numpy as np
+"""1D shallow-water-equation solver (HLL finite volume, MUSCL reconstruction, RK2 in time)."""
 
 from typing import Callable
+
 import matplotlib.pyplot as plt
+import numpy as np
 
 def apply_bcs(Q: np.ndarray, flow_rate: float, zb: np.ndarray):
     g = 9.81
@@ -356,8 +358,10 @@ def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_f
             u = np.divide(Q_array[:, 1], h, out=np.zeros_like(h), where=h > 1e-4)
             line_eta.set_ydata(eta)
             line_u.set_ydata(u)
-            ax1.relim(); ax1.autoscale_view()
-            ax2.relim(); ax2.autoscale_view()
+            ax1.relim()
+            ax1.autoscale_view()
+            ax2.relim()
+            ax2.autoscale_view()
             ax1.set_title(f"Time: {t:.2f} s | Max Change: {max_change:.6f}")
             fig.canvas.draw()
             fig.canvas.flush_events()

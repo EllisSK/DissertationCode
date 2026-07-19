@@ -2,13 +2,17 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-import numpy as np
-import pandas as pd
-import plotly.express as px
+"""Flume simulation setup: composite roughness and barrier discharge closures for the solver."""
 
 from pathlib import Path
-from .solver import simulate, simulate_barrier
 from typing import Callable
+
+import numpy as np
+import pandas as pd
+
+from src.constants import GRAVITY, PLANK_1_HEIGHT, PLANK_2_HEIGHT, PLANK_3_HEIGHT
+
+from .solver import simulate, simulate_barrier
 
 class Flume:
     def __init__(self, barrier_setup: str | None, set_flow: float, incline: float):
@@ -40,20 +44,20 @@ class Flume:
         gap2 = split_data[1] / 1000
         gap3 = split_data[2] / 1000
 
-        plank1 = 0.2
-        plank2 = 0.1
-        plank3 = 0.1
+        plank1 = PLANK_1_HEIGHT
+        plank2 = PLANK_2_HEIGHT
+        plank3 = PLANK_3_HEIGHT
 
         plank3_top = gap1 + plank1 + gap2 + plank2 + gap3 + plank3
         plank3_bottom = gap1 + plank1 + gap2 + plank2 + gap3
         plank2_top = gap1 + plank1 + gap2 + plank2
         plank2_bottom = gap1 + plank1 + gap2
         plank1_top = gap1 + plank1
-        
+
         coeff_contraction = np.pi / (np.pi + 2)
         coeff_velocity = 0.98
         coeff_discharge = coeff_contraction * coeff_velocity
-        g = 9.80665
+        g = GRAVITY
 
         def fn(h, ds):
             h_arr = np.atleast_1d(h)
