@@ -5,8 +5,8 @@
 """Publication figures for the research paper (Journal of Flood Risk Management).
 
 Each function produces one numbered figure from the manuscript and writes it to
-exports/figures/paper/. Figure 4 is a photograph of the flume and is supplied
-separately rather than generated here.
+exports/figures/paper/. Figure 1 (CAD drawing of the physical barrier model) and
+Figure 4 (photograph of the flume) are produced outside this module.
 
 Colour assignments avoid red-green combinations per the journal's accessibility
 guidance, and every multi-series figure additionally distinguishes series by
@@ -84,67 +84,6 @@ def _model_curve(plotting_function, setup: str, depth_range_m: tuple, name: str,
 def _setup_depth_range(model_df: pd.DataFrame, setup: str) -> tuple:
     setup_depths = model_df[model_df["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"]
     return setup_depths.min() / 1000, setup_depths.max() / 1000
-
-
-def figure_1_barrier_schematic():
-    """Dimensioned schematic of the three-plank physical barrier model.
-
-    Vertical dimensions are to scale (drawn for a 50-50-50 configuration);
-    plank thickness is exaggerated for clarity.
-    """
-    fig, ax = plt.subplots(figsize=(12 * 0.393701, 10 * 0.393701))
-
-    gap = 50
-    plank_heights_mm = [PLANK_1_HEIGHT * 1000, PLANK_2_HEIGHT * 1000, PLANK_3_HEIGHT * 1000]
-    plank_x = 270
-    plank_width = 45
-
-    # Bed with hatched underside
-    ax.plot([0, 600], [0, 0], color="black", linewidth=2)
-    ax.fill_between([0, 600], 0, -25, facecolor="white", edgecolor="black", hatch="///", linewidth=0)
-
-    dim_font = {"fontname": "Arial", "fontsize": 9}
-    arrow_style = {"arrowstyle": "<->", "color": "black", "linewidth": 1}
-
-    bottom = gap
-    for i, height in enumerate(plank_heights_mm):
-        ax.add_patch(plt.Rectangle((plank_x, bottom), plank_width, height, facecolor="black", edgecolor="black", zorder=10))
-
-        # Plank height dimension on the right
-        dim_x = plank_x + plank_width + 60
-        ax.annotate("", xy=(dim_x, bottom), xytext=(dim_x, bottom + height), arrowprops=arrow_style)
-        ax.plot([plank_x + plank_width + 5, dim_x + 15], [bottom, bottom], color="black", linewidth=0.5)
-        ax.plot([plank_x + plank_width + 5, dim_x + 15], [bottom + height, bottom + height], color="black", linewidth=0.5)
-        ax.text(dim_x + 20, bottom + height / 2, f"{height:.0f} mm", va="center", ha="left", **dim_font)
-
-        # Gap dimension on the left
-        gap_bottom = bottom - gap
-        gap_x = plank_x - 60
-        ax.annotate("", xy=(gap_x, gap_bottom), xytext=(gap_x, bottom), arrowprops=arrow_style)
-        ax.plot([gap_x - 15, plank_x - 5], [bottom, bottom], color="black", linewidth=0.5)
-        if i > 0:
-            ax.plot([gap_x - 15, plank_x - 5], [gap_bottom, gap_bottom], color="black", linewidth=0.5)
-        ax.text(gap_x - 20, gap_bottom + gap / 2, f"gap {i + 1}\n(adjustable)", va="center", ha="right", **dim_font)
-
-        bottom += height + gap
-
-    # Flow direction indicator
-    ax.annotate(
-        "Flow", xy=(160, 105), xytext=(30, 105),
-        arrowprops={"arrowstyle": "-|>", "color": "black", "linewidth": 1.5},
-        va="center", fontname="Arial", fontsize=11,
-    )
-
-    ax.set_xlim(-70, 620)
-    ax.set_ylim(-40, 620)
-    ax.set_aspect("equal")
-    ax.axis("off")
-    fig.tight_layout()
-
-    PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(PAPER_FIGURE_DIR / "Figure1.svg")
-    plt.close(fig)
-    return fig
 
 
 def figure_2_combined_models(lab_data: pd.DataFrame):
@@ -363,7 +302,6 @@ def generate_paper_figures():
     lab_data = remove_submerged(read_barrier_data())
     raw_lab_data = pd.read_csv(Path("data/BarrierExperiments.csv"))
 
-    figure_1_barrier_schematic()
     figure_2_combined_models(lab_data)
     figure_3_advanced_model(lab_data)
     figure_5_representation_comparison(lab_data)
