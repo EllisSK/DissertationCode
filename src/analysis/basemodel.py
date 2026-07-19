@@ -2,11 +2,21 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-import pandas as pd
+"""Common behaviour for the barrier discharge models.
+
+Each model receives the mean upstream depth data, derives its geometry from the
+"gap1-gap2-gap3" barrier setup string and predicts the flow through the barrier.
+"Simple" models fit an empirical coefficient with least squares; "advanced"
+models use analytically derived discharge coefficients and need no fitting.
+"""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from tqdm import tqdm
+
+import pandas as pd
+
+from . import objective
+
 
 class BaseModel(ABC):
     def __init__(self, name: str) -> None:
@@ -26,9 +36,6 @@ class BaseModel(ABC):
     def write_report(self, report_directory: Path):
         pass
 
-    def create_figure(self):
-        pass
-
     @abstractmethod
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
@@ -41,31 +48,27 @@ class BaseModel(ABC):
         df["Upstream Head (m)"] = (df["Mean Upstream Depth (mm)"] / 1000)
 
         return df
-    
+
     @abstractmethod
     def _calculate_objective_functions(self, df: pd.DataFrame) -> tuple:
         pass
 
-    def _rmse(self, observed, predicted):
-        return ((predicted - observed) ** 2).mean() ** 0.5
+    def _metrics(self, observed, predicted) -> tuple:
+        return objective.all_metrics(observed, predicted)
 
-    def _mae(self, observed, predicted):
-        return (predicted - observed).abs().mean()
+    def _write_report_file(self, report_directory: Path, title: str, header_lines: list[str] | None = None):
+        rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
 
-    def _bias(self, observed, predicted):
-        return (predicted - observed).mean()
+        file_path = report_directory / f"{self.name}.txt"
 
-    def _variability(self, observed, predicted):
-        return predicted.std() / observed.std()
-
-    def _correlation(self, observed, predicted):
-        return observed.corr(predicted)
-
-    def _kge(self, observed, predicted):
-        corr = self._correlation(observed, predicted)
-        var = self._variability(observed, predicted)
-        bias = predicted.mean() / observed.mean()
-        return 1 - ((corr - 1) ** 2 + (var - 1) ** 2 + (bias - 1) ** 2) ** 0.5
-    
-    def _r2(self, observed, predicted):
-            return 1 - ((predicted - observed) ** 2).sum() / ((observed - observed.mean()) ** 2).sum()
+        with open(file_path, "w") as f:
+            f.write(f"{title}\n")
+            for line in header_lines or []:
+                f.write(f"{line}\n")
+            f.write(f"RMSE: {rmse}\n")
+            f.write(f"MAE: {mae}\n")
+            f.write(f"Absolute Bias: {bias}\n")
+            f.write(f"Variability Ratio: {var}\n")
+            f.write(f"Correlation: {corr}\n")
+            f.write(f"KGE: {kge}\n")
+            f.write(f"R Squared: {r2}\n")

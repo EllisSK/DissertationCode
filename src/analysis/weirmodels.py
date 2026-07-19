@@ -2,12 +2,39 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
+"""Sharp-crested weir discharge models for flow over the top of the barrier."""
+
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+from scipy.optimize import curve_fit
+
+from src.constants import GRAVITY, PLANK_1_HEIGHT, PLANK_2_HEIGHT, PLANK_3_HEIGHT
 
 from .basemodel import BaseModel
-from scipy.optimize import curve_fit
+
+
+def _add_weir_geometry(df: pd.DataFrame) -> pd.DataFrame:
+    df = df[(df["Operation Mode"] == "Weir")]
+
+    split_data = df["Barrier Setup"].str.split("-", expand=True).astype(int)
+    is_gap1_zero = split_data[0] == 0
+    is_gap2_zero = split_data[1] == 0
+    is_gap3_zero = split_data[2] == 0
+
+    # The crest sits on top of however many planks rest directly on the ones below
+    df["Weir Height (m)"] = (
+        (is_gap1_zero * PLANK_1_HEIGHT)
+        + ((is_gap1_zero & is_gap2_zero) * PLANK_2_HEIGHT)
+        + ((is_gap1_zero & is_gap2_zero & is_gap3_zero) * PLANK_3_HEIGHT)
+    )
+    df["Head on Weir (m)"] = df["Upstream Head (m)"] - df["Weir Height (m)"]
+
+    df = df[(df["Head on Weir (m)"] > 0)]
+
+    return df
+
 
 class SimpleWeirModel(BaseModel):
     def __init__(self, name: str, lab_data: pd.DataFrame) -> None:
@@ -20,32 +47,18 @@ class SimpleWeirModel(BaseModel):
         return coeff * np.power(X, 1.5)
 
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = super()._create_model_dataframe(df)
+        return _add_weir_geometry(super()._create_model_dataframe(df))
 
-        df = df[(df["Operation Mode"] == "Weir")]
-
-        split_data = df["Barrier Setup"].str.split("-", expand=True).astype(int)
-        is_gap1_zero = split_data[0] == 0
-        is_gap2_zero = split_data[1] == 0
-        is_gap3_zero = split_data[2] == 0
-
-        df["Weir Height (m)"] = ((is_gap1_zero * 0.2) + ((is_gap1_zero & is_gap2_zero) * 0.1) + ((is_gap1_zero & is_gap2_zero & is_gap3_zero) * 0.1))
-        df["Head on Weir (m)"] = df["Upstream Head (m)"] - df["Weir Height (m)"]
-
-        df = df[(df["Head on Weir (m)"] > 0)]
-
-        return df
-    
     def predict(self, X):
         if self.fitted:
             flow = self._equation(X, self.optimal)
             return flow
         else:
             raise Exception("Model hasn't been fit yet!")
-        
+
     def fit(self):
-        df = self.df 
-        
+        df = self.df
+
         x_data = (
             df["Head on Weir (m)"]
         )
@@ -53,46 +66,29 @@ class SimpleWeirModel(BaseModel):
         y_data = df["Flow (m3/s)"]
 
         self.popt, self.pcov = curve_fit(self._equation, x_data, y_data)
-         
+
         self.optimal = self.popt[0]
         self.fitted = True
 
     def _calculate_objective_functions(self, df: pd.DataFrame):
         df = df.copy()
         df["Predicted"] = self.predict((df["Head on Weir (m)"]))
-        
-        observed = df["Flow (m3/s)"]
-        predicted = df["Predicted"]
-        
-        rmse = self._rmse(observed, predicted)
-        mae = self._mae(observed, predicted)
-        bias = self._bias(observed, predicted)
-        var = self._variability(observed, predicted)
-        corr = self._correlation(observed, predicted)
-        kge = self._kge(observed, predicted)
-        r2 = self._r2(observed, predicted)
 
-        return rmse, mae, bias, var, corr, kge, r2
+        return self._metrics(df["Flow (m3/s)"], df["Predicted"])
 
     def write_report(self, report_directory: Path):
-        file_path = report_directory / f"{self.name}.txt"
-        
-        if self.fitted:
-            rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
-            
-            with open(file_path, "w") as f:
-                f.write(f"Simple Weir Model Report\n")
-                f.write(f"Optimised Coefficient: {self.popt[0]}\n")
-                f.write(f"Optimised Coefficient Standard Deviation: {np.sqrt(np.diag(self.pcov))[0]}\n")
-                f.write(f"RMSE: {rmse}\n")
-                f.write(f"MAE: {mae}\n")
-                f.write(f"Absolute Bias: {bias}\n")
-                f.write(f"Variability Ratio: {var}\n")
-                f.write(f"Correlation: {corr}\n")
-                f.write(f"KGE: {kge}\n")
-                f.write(f"R Squared: {r2}\n")
-        else:
+        if not self.fitted:
             raise Exception("Model hasn't been fit yet!")
+
+        self._write_report_file(
+            report_directory,
+            "Simple Weir Model Report",
+            [
+                f"Optimised Coefficient: {self.popt[0]}",
+                f"Optimised Coefficient Standard Deviation: {np.sqrt(np.diag(self.pcov))[0]}",
+            ],
+        )
+
 
 class AdvancedWeirModel(BaseModel):
     def __init__(self, name: str, lab_data: pd.DataFrame) -> None:
@@ -104,25 +100,11 @@ class AdvancedWeirModel(BaseModel):
 
         coeff_discharge = (np.pi / (np.pi + 2)) * 0.98
 
-        return (2/3) * coeff_discharge * np.sqrt(2 * 9.80665) * np.power(h, 1.5)
+        return (2/3) * coeff_discharge * np.sqrt(2 * GRAVITY) * np.power(h, 1.5)
 
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = super()._create_model_dataframe(df)
+        return _add_weir_geometry(super()._create_model_dataframe(df))
 
-        df = df[(df["Operation Mode"] == "Weir")]
-
-        split_data = df["Barrier Setup"].str.split("-", expand=True).astype(int)
-        is_gap1_zero = split_data[0] == 0
-        is_gap2_zero = split_data[1] == 0
-        is_gap3_zero = split_data[2] == 0
-
-        df["Weir Height (m)"] = ((is_gap1_zero * 0.2) + ((is_gap1_zero & is_gap2_zero) * 0.1) + ((is_gap1_zero & is_gap2_zero & is_gap3_zero) * 0.1))
-        df["Head on Weir (m)"] = df["Upstream Head (m)"] - df["Weir Height (m)"]
-
-        df = df[(df["Head on Weir (m)"] > 0)]
-
-        return df
-    
     def predict(self, X):
         flow = self._equation(X)
         return flow
@@ -130,32 +112,8 @@ class AdvancedWeirModel(BaseModel):
     def _calculate_objective_functions(self, df: pd.DataFrame):
         df = df.copy()
         df["Predicted"] = self.predict((df["Head on Weir (m)"], df["Weir Height (m)"]))
-        
-        observed = df["Flow (m3/s)"]
-        predicted = df["Predicted"]
-        
-        rmse = self._rmse(observed, predicted)
-        mae = self._mae(observed, predicted)
-        bias = self._bias(observed, predicted)
-        var = self._variability(observed, predicted)
-        corr = self._correlation(observed, predicted)
-        kge = self._kge(observed, predicted)
-        r2 = self._r2(observed, predicted)
 
-        return rmse, mae, bias, var, corr, kge, r2
+        return self._metrics(df["Flow (m3/s)"], df["Predicted"])
 
     def write_report(self, report_directory: Path):
-        file_path = report_directory / f"{self.name}.txt"
-        
-
-        rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
-        
-        with open(file_path, "w") as f:
-            f.write(f"Advanced Weir Model Report\n")
-            f.write(f"RMSE: {rmse}\n")
-            f.write(f"MAE: {mae}\n")
-            f.write(f"Absolute Bias: {bias}\n")
-            f.write(f"Variability Ratio: {var}\n")
-            f.write(f"Correlation: {corr}\n")
-            f.write(f"KGE: {kge}\n")
-            f.write(f"R Squared: {r2}\n")
+        self._write_report_file(report_directory, "Advanced Weir Model Report")
