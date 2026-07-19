@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 from argparse import ArgumentParser
-from typing import Any, Sequence
 
 
 class CustomParser(ArgumentParser):

@@ -2,4 +2,6 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 
-from .parser import *
+from .parser import CustomParser
+
+__all__ = ["CustomParser"]
