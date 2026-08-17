@@ -49,7 +49,13 @@ def barrier_flow_params(barrier_setup: str, upstream_depth: float) -> tuple:
 
         if upstream_depth > plank3_top:
             # Sluice-Orifice-Orifice-Weir
-            return (*sluice, *orifice1, *orifice2, upstream_depth - plank3_top, plank3_top)
+            return (
+                *sluice,
+                *orifice1,
+                *orifice2,
+                upstream_depth - plank3_top,
+                plank3_top,
+            )
         elif upstream_depth > plank3_bottom:
             # Sluice-Orifice-Orifice
             return (*sluice, *orifice1, *orifice2, 0, 0)
@@ -125,7 +131,7 @@ class SimpleCombinedModel(BaseModel):
         df = df.copy()
         df["Predicted"] = df.apply(
             lambda row: self.predict(row["Barrier Setup"], row["Upstream Head (m)"]),
-            axis=1
+            axis=1,
         )
 
         return self._metrics(df["Flow (m3/s)"], df["Predicted"])
@@ -160,7 +166,11 @@ class SimpleIFCombinedModel(BaseModel):
         orifice_flow = self.orifice.predict(orifice_params)
         weir_flow = self.weir.predict(weir_params)
 
-        return (IF_sluice*sluice_flow) + (IF_orifice*orifice_flow) + (IF_weir*weir_flow)
+        return (
+            (IF_sluice * sluice_flow)
+            + (IF_orifice * orifice_flow)
+            + (IF_weir * weir_flow)
+        )
 
     def _params_from_setup(self, barrier_setup, upstream_depth):
         return barrier_flow_params(barrier_setup, upstream_depth)[:7]
@@ -170,10 +180,9 @@ class SimpleIFCombinedModel(BaseModel):
 
         df["Params"] = df.apply(
             lambda row: self._params_from_setup(
-                row["Barrier Setup"],
-                row["Upstream Head (m)"]
+                row["Barrier Setup"], row["Upstream Head (m)"]
             ),
-            axis=1
+            axis=1,
         )
 
         return df
@@ -195,16 +204,26 @@ class SimpleIFCombinedModel(BaseModel):
         self.optimal = self.popt
 
     def plotting_function(self, upstream_depth, barrier_setup):
-        return self._equation(self._params_from_setup(barrier_setup, upstream_depth), self.if_sluice, self.if_orifice, self.if_weir)
+        return self._equation(
+            self._params_from_setup(barrier_setup, upstream_depth),
+            self.if_sluice,
+            self.if_orifice,
+            self.if_weir,
+        )
 
     def predict(self, barrier_setup, upstream_depth):
-        return self._equation(self._params_from_setup(barrier_setup, upstream_depth), self.if_sluice, self.if_orifice, self.if_weir)
+        return self._equation(
+            self._params_from_setup(barrier_setup, upstream_depth),
+            self.if_sluice,
+            self.if_orifice,
+            self.if_weir,
+        )
 
     def _calculate_objective_functions(self, df: pd.DataFrame):
         df = df.copy()
         df["Predicted"] = df.apply(
             lambda row: self.predict(row["Barrier Setup"], row["Upstream Head (m)"]),
-            axis=1
+            axis=1,
         )
 
         return self._metrics(df["Flow (m3/s)"], df["Predicted"])
@@ -269,7 +288,7 @@ class AdvancedCombinedModel(BaseModel):
         df = df.copy()
         df["Predicted"] = df.apply(
             lambda row: self.predict(row["Barrier Setup"], row["Upstream Head (m)"]),
-            axis=1
+            axis=1,
         )
 
         return self._metrics(df["Flow (m3/s)"], df["Predicted"])

@@ -41,11 +41,15 @@ class BaseModel(ABC):
         df = df.copy()
 
         df["Set Flow (l/s)"] = pd.to_numeric(df["Set Flow (l/s)"], errors="coerce")
-        df["Mean Upstream Depth (mm)"] = pd.to_numeric(df["Mean Upstream Depth (mm)"], errors="coerce")
+        df["Mean Upstream Depth (mm)"] = pd.to_numeric(
+            df["Mean Upstream Depth (mm)"], errors="coerce"
+        )
 
         df["Flow (m3/s)"] = df["Set Flow (l/s)"] / 1000
-        df["Upstream Velocity (m/s)"] = df["Flow (m3/s)"] / (df["Mean Upstream Depth (mm)"] / 1000)
-        df["Upstream Head (m)"] = (df["Mean Upstream Depth (mm)"] / 1000)
+        df["Upstream Velocity (m/s)"] = df["Flow (m3/s)"] / (
+            df["Mean Upstream Depth (mm)"] / 1000
+        )
+        df["Upstream Head (m)"] = df["Mean Upstream Depth (mm)"] / 1000
 
         return df
 
@@ -56,8 +60,12 @@ class BaseModel(ABC):
     def _metrics(self, observed, predicted) -> tuple:
         return objective.all_metrics(observed, predicted)
 
-    def _write_report_file(self, report_directory: Path, title: str, header_lines: list[str] | None = None):
-        rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(self.df)
+    def _write_report_file(
+        self, report_directory: Path, title: str, header_lines: list[str] | None = None
+    ):
+        rmse, mae, bias, var, corr, kge, r2 = self._calculate_objective_functions(
+            self.df
+        )
 
         file_path = report_directory / f"{self.name}.txt"
 

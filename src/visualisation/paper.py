@@ -8,9 +8,8 @@ Each function produces one numbered figure from the manuscript and writes it to
 exports/figures/paper/. Figure 1 (CAD drawing of the physical barrier model) and
 Figure 4 (photograph of the flume) are produced outside this module.
 
-Colour assignments avoid red-green combinations per the journal's accessibility
-guidance, and every multi-series figure additionally distinguishes series by
-line style or marker shape so identity never relies on colour alone.
+Every figure is monochrome so it reproduces faithfully in print: series are
+distinguished by line style or marker shape alone, never by colour.
 """
 
 from pathlib import Path
@@ -42,32 +41,51 @@ from .baseplots import create_barrier_depth_diagram
 from .io import save_figure
 from .plots import visualisation_1_8
 
-MEASURED_COLOUR = "#008dff"
-PRIMARY_MODEL_COLOUR = "#d83034"
-SECONDARY_MODEL_COLOUR = "#ff9d3a"
-TERTIARY_MODEL_COLOUR = "#c701ff"
+LINE_COLOUR = "black"
+CURVE_WIDTH = 3
+PROFILE_WIDTH = 1.0
+SECONDARY_MODEL_DASH = "14px,7px"
+TERTIARY_MODEL_DASH = "4px,8px"
+CONFIDENCE_BAND_FILL = "rgba(0, 0, 0, 0.15)"
 
 PAPER_SUBDIR = "paper"
 PAPER_FIGURE_DIR = Path("exports/figures") / PAPER_SUBDIR
+PAPER_FORMATS = ("svg", "pdf")
 
 FLOW_AXIS_TITLE = "Flow (m<sup>3</sup> s<sup>−1</sup>)"
 DEPTH_AXIS_TITLE = "Mean Upstream Depth (mm)"
 
+AXIS_TITLE_STANDOFF = 30
+PAPER_MARGIN = {"l": 180, "b": 130}
+
+
+def _axis_title(text: str) -> dict:
+    return {"text": text, "standoff": AXIS_TITLE_STANDOFF}
+
 
 def _measured_trace(model_df: pd.DataFrame, setup: str, **overrides) -> go.Scatter:
-    data = model_df[model_df["Barrier Setup"] == setup].sort_values("Mean Upstream Depth (mm)")
+    data = model_df[model_df["Barrier Setup"] == setup].sort_values(
+        "Mean Upstream Depth (mm)"
+    )
     trace = {
         "x": data["Flow (m3/s)"],
         "y": data["Mean Upstream Depth (mm)"],
         "mode": "markers",
         "name": "Measured",
-        "marker": {"symbol": "x", "color": MEASURED_COLOUR},
+        "marker": {"symbol": "x", "color": LINE_COLOUR},
     }
     trace.update(overrides)
     return go.Scatter(**trace)
 
 
-def _model_curve(plotting_function, setup: str, depth_range_m: tuple, name: str, colour: str, dash: str = "solid", **overrides) -> go.Scatter:
+def _model_curve(
+    plotting_function,
+    setup: str,
+    depth_range_m: tuple,
+    name: str,
+    dash: str = "solid",
+    **overrides,
+) -> go.Scatter:
     depths = np.arange(depth_range_m[0], depth_range_m[1], 0.0005)
     flows = np.array([plotting_function(depth, setup) for depth in depths])
     trace = {
@@ -75,14 +93,16 @@ def _model_curve(plotting_function, setup: str, depth_range_m: tuple, name: str,
         "y": depths * 1000,
         "mode": "lines",
         "name": name,
-        "line": {"color": colour, "dash": dash},
+        "line": {"color": LINE_COLOUR, "dash": dash, "width": CURVE_WIDTH},
     }
     trace.update(overrides)
     return go.Scatter(**trace)
 
 
 def _setup_depth_range(model_df: pd.DataFrame, setup: str) -> tuple:
-    setup_depths = model_df[model_df["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"]
+    setup_depths = model_df[model_df["Barrier Setup"] == setup][
+        "Mean Upstream Depth (mm)"
+    ]
     return setup_depths.min() / 1000, setup_depths.max() / 1000
 
 
@@ -98,23 +118,58 @@ def figure_2_combined_models(lab_data: pd.DataFrame):
 
     fig = go.Figure()
     fig.add_trace(_measured_trace(simple.df, setup))
-    fig.add_trace(_model_curve(simple.plotting_function, setup, depth_range, "Simple combined model", PRIMARY_MODEL_COLOUR))
-    fig.add_trace(_model_curve(advanced.plotting_function, setup, depth_range, "Advanced combined model", SECONDARY_MODEL_COLOUR, dash="dash"))
+    fig.add_trace(
+        _model_curve(
+            simple.plotting_function, setup, depth_range, "Simple combined model"
+        )
+    )
+    fig.add_trace(
+        _model_curve(
+            advanced.plotting_function,
+            setup,
+            depth_range,
+            "Advanced combined model",
+            dash=SECONDARY_MODEL_DASH,
+        )
+    )
 
-    # Inset window around the transition at the bottom of the second plank,
-    # where the simple model switches its weir term to an orifice term
     transition_depth = 0.05 + PLANK_1_HEIGHT + 0.05
     inset_depths = (transition_depth - 0.012, transition_depth + 0.018)
-    window_flows = [simple.plotting_function(d, setup) for d in np.arange(*inset_depths, 0.0005)]
+    window_flows = [
+        simple.plotting_function(d, setup) for d in np.arange(*inset_depths, 0.0005)
+    ]
     inset_flows = (min(window_flows) * 0.995, max(window_flows) * 1.005)
 
-    fig.add_trace(_model_curve(simple.plotting_function, setup, inset_depths, "", PRIMARY_MODEL_COLOUR, showlegend=False, xaxis="x2", yaxis="y2"))
-    fig.add_trace(_model_curve(advanced.plotting_function, setup, inset_depths, "", SECONDARY_MODEL_COLOUR, dash="dash", showlegend=False, xaxis="x2", yaxis="y2"))
+    fig.add_trace(
+        _model_curve(
+            simple.plotting_function,
+            setup,
+            inset_depths,
+            "",
+            showlegend=False,
+            xaxis="x2",
+            yaxis="y2",
+        )
+    )
+    fig.add_trace(
+        _model_curve(
+            advanced.plotting_function,
+            setup,
+            inset_depths,
+            "",
+            dash=SECONDARY_MODEL_DASH,
+            showlegend=False,
+            xaxis="x2",
+            yaxis="y2",
+        )
+    )
 
     fig.add_shape(
         type="rect",
-        x0=inset_flows[0], x1=inset_flows[1],
-        y0=inset_depths[0] * 1000, y1=inset_depths[1] * 1000,
+        x0=inset_flows[0],
+        x1=inset_flows[1],
+        y0=inset_depths[0] * 1000,
+        y1=inset_depths[1] * 1000,
         line={"color": "black", "width": 2},
     )
 
@@ -127,14 +182,25 @@ def figure_2_combined_models(lab_data: pd.DataFrame):
         "showgrid": False,
     }
     fig.update_layout(
-        xaxis={"title": FLOW_AXIS_TITLE, "range": [0, None]},
-        yaxis={"title": DEPTH_AXIS_TITLE, "range": [0, None]},
-        xaxis2={"domain": [0.56, 0.97], "anchor": "y2", "range": list(inset_flows), **inset_axis_style},
-        yaxis2={"domain": [0.07, 0.52], "anchor": "x2", "range": [d * 1000 for d in inset_depths], **inset_axis_style},
+        xaxis={"title": _axis_title(FLOW_AXIS_TITLE), "range": [0, None]},
+        yaxis={"title": _axis_title(DEPTH_AXIS_TITLE), "range": [0, None]},
+        xaxis2={
+            "domain": [0.56, 0.97],
+            "anchor": "y2",
+            "range": list(inset_flows),
+            **inset_axis_style,
+        },
+        yaxis2={
+            "domain": [0.07, 0.52],
+            "anchor": "x2",
+            "range": [d * 1000 for d in inset_depths],
+            **inset_axis_style,
+        },
         legend={"yanchor": "top", "y": 0.99, "xanchor": "left", "x": 0.01},
+        margin=PAPER_MARGIN,
     )
 
-    save_figure(fig, "Figure2", PAPER_SUBDIR)
+    save_figure(fig, "Figure2", PAPER_SUBDIR, formats=PAPER_FORMATS)
     return fig
 
 
@@ -147,15 +213,20 @@ def figure_3_advanced_model(lab_data: pd.DataFrame):
 
     fig = go.Figure()
     fig.add_trace(_measured_trace(advanced.df, setup))
-    fig.add_trace(_model_curve(advanced.plotting_function, setup, depth_range, "Advanced combined model", PRIMARY_MODEL_COLOUR))
-
-    fig.update_layout(
-        xaxis={"title": FLOW_AXIS_TITLE, "range": [0, None]},
-        yaxis={"title": DEPTH_AXIS_TITLE, "range": [0, None]},
-        legend={"yanchor": "top", "y": 0.99, "xanchor": "left", "x": 0.01},
+    fig.add_trace(
+        _model_curve(
+            advanced.plotting_function, setup, depth_range, "Advanced combined model"
+        )
     )
 
-    save_figure(fig, "Figure3", PAPER_SUBDIR)
+    fig.update_layout(
+        xaxis={"title": _axis_title(FLOW_AXIS_TITLE), "range": [0, None]},
+        yaxis={"title": _axis_title(DEPTH_AXIS_TITLE), "range": [0, None]},
+        legend={"yanchor": "top", "y": 0.99, "xanchor": "left", "x": 0.01},
+        margin=PAPER_MARGIN,
+    )
+
+    save_figure(fig, "Figure3", PAPER_SUBDIR, formats=PAPER_FORMATS)
     return fig
 
 
@@ -190,7 +261,9 @@ def figure_5_representation_comparison(lab_data: pd.DataFrame):
     def manning_form(h, coeff):
         return coeff * np.power(h, 5 / 3) / np.power(CHANNEL_WIDTH + 2 * h, 2 / 3)
 
-    popt, _ = curve_fit(manning_form, setup_df["Upstream Head (m)"], setup_df["Flow (m3/s)"])
+    popt, _ = curve_fit(
+        manning_form, setup_df["Upstream Head (m)"], setup_df["Flow (m3/s)"]
+    )
 
     def lumped_friction(depth, _setup):
         return manning_form(depth, popt[0])
@@ -199,28 +272,65 @@ def figure_5_representation_comparison(lab_data: pd.DataFrame):
 
     fig = go.Figure()
     fig.add_trace(_measured_trace(advanced.df, setup))
-    fig.add_trace(_model_curve(advanced.plotting_function, setup, depth_range, "Compound structure model", PRIMARY_MODEL_COLOUR))
-    # Explicit dash pattern: the default scales with line width and swallows the
-    # near-vertical section of the curve at the crest transition
-    fig.add_trace(_model_curve(weir_gate, setup, depth_range, "Weir-gate representation", SECONDARY_MODEL_COLOUR, dash="14px,7px"))
-    fig.add_trace(_model_curve(lumped_friction, setup, depth_range, "Lumped friction representation", TERTIARY_MODEL_COLOUR, dash="dot"))
-
-    fig.update_layout(
-        xaxis={"title": FLOW_AXIS_TITLE, "range": [0, None]},
-        yaxis={"title": DEPTH_AXIS_TITLE, "range": [0, None]},
-        # Bottom-right: the top-left corner would occlude the steep weir-gate curve
-        legend={"yanchor": "bottom", "y": 0.03, "xanchor": "right", "x": 0.99},
+    fig.add_trace(
+        _model_curve(
+            advanced.plotting_function, setup, depth_range, "Compound structure model"
+        )
+    )
+    fig.add_trace(
+        _model_curve(
+            weir_gate,
+            setup,
+            depth_range,
+            "Weir-gate representation",
+            dash=SECONDARY_MODEL_DASH,
+        )
+    )
+    fig.add_trace(
+        _model_curve(
+            lumped_friction,
+            setup,
+            depth_range,
+            "Lumped friction representation",
+            dash=TERTIARY_MODEL_DASH,
+        )
     )
 
-    save_figure(fig, "Figure5", PAPER_SUBDIR)
+    fig.update_layout(
+        xaxis={"title": _axis_title(FLOW_AXIS_TITLE), "range": [0, None]},
+        yaxis={"title": _axis_title(DEPTH_AXIS_TITLE), "range": [0, None]},
+        # Bottom-right: the top-left corner would occlude the steep weir-gate curve
+        legend={"yanchor": "bottom", "y": 0.03, "xanchor": "right", "x": 0.99},
+        margin=PAPER_MARGIN,
+    )
+
+    save_figure(fig, "Figure5", PAPER_SUBDIR, formats=PAPER_FORMATS)
     return fig
 
 
 def figure_6_friction_regression():
     """Composite Manning's n regression with its 95% confidence band."""
     fig = visualisation_1_8()
-    fig.update_layout(title=None)
-    save_figure(fig, "Figure6", PAPER_SUBDIR)
+    fig.update_layout(
+        title=None,
+        xaxis={"title": {"standoff": AXIS_TITLE_STANDOFF}},
+        yaxis={"title": {"standoff": AXIS_TITLE_STANDOFF}},
+        margin=PAPER_MARGIN,
+    )
+
+    fig.update_traces(
+        selector={"name": "95% Confidence Interval"}, fillcolor=CONFIDENCE_BAND_FILL
+    )
+    fig.update_traces(
+        selector={"name": "Regression Fit"},
+        line={"color": LINE_COLOUR, "width": CURVE_WIDTH},
+    )
+    fig.update_traces(
+        selector={"name": "Variables Derived from Measurements"},
+        marker={"color": LINE_COLOUR},
+    )
+
+    save_figure(fig, "Figure6", PAPER_SUBDIR, formats=PAPER_FORMATS)
     return fig
 
 
@@ -247,11 +357,13 @@ def _ensure_numerical_profile(setup: str, flow_ls: float) -> Path:
     n_cells = int(FLUME_LENGTH / dx)
     x_vals = np.linspace(dx / 2, FLUME_LENGTH - (dx / 2), n_cells)
 
-    pd.DataFrame({
-        "X Position (m)": x_vals,
-        "Depth (mm)": np.maximum(profile[1:-1, 0], 0.0) * 1000.0,
-        "Velocity (m/s)": profile[1:-1, 1],
-    }).to_csv(path, index=False)
+    pd.DataFrame(
+        {
+            "X Position (m)": x_vals,
+            "Depth (mm)": np.maximum(profile[1:-1, 0], 0.0) * 1000.0,
+            "Velocity (m/s)": profile[1:-1, 1],
+        }
+    ).to_csv(path, index=False)
 
     return path
 
@@ -263,7 +375,9 @@ def figure_7_numerical_profiles(raw_lab_data: pd.DataFrame):
     submerged-configuration list, and filtering it out would drop its measured
     points, including the supercritical jet measurement discussed in the paper.
     """
-    fig, axes = plt.subplots(2, 2, figsize=(2 * 15.92 * 0.393701 / 1.6, 2 * 9.84 * 0.393701 / 1.6))
+    fig, axes = plt.subplots(
+        2, 2, figsize=(2 * 15.92 * 0.393701 / 1.6, 2 * 9.84 * 0.393701 / 1.6)
+    )
 
     for (label, setup, flow), ax in zip(FIGURE_7_CASES, axes.flat):
         profile_path = _ensure_numerical_profile(setup, flow)
@@ -279,10 +393,21 @@ def figure_7_numerical_profiles(raw_lab_data: pd.DataFrame):
             (raw_lab_data["Barrier Setup"] == setup)
             & (raw_lab_data["Set Flow (l/s)"] == flow)
         ]
-        point_data = point_data.groupby("X Position (mm)", as_index=False)["Depth (mm)"].mean()
+        point_data = point_data.groupby("X Position (mm)", as_index=False)[
+            "Depth (mm)"
+        ].mean()
 
         title = f"({label}) {setup} at {flow:.0f} L s$^{{-1}}$"
-        create_barrier_depth_diagram(setup, us_profile, ds_profile, point_data, title, ax=ax)
+        create_barrier_depth_diagram(
+            setup,
+            us_profile,
+            ds_profile,
+            point_data,
+            title,
+            ax=ax,
+            monochrome=True,
+            line_width=PROFILE_WIDTH,
+        )
 
         if label != "a":
             legend = ax.get_legend()
@@ -292,7 +417,8 @@ def figure_7_numerical_profiles(raw_lab_data: pd.DataFrame):
     fig.tight_layout()
 
     PAPER_FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(PAPER_FIGURE_DIR / "Figure7.svg")
+    for image_format in PAPER_FORMATS:
+        fig.savefig(PAPER_FIGURE_DIR / f"Figure7.{image_format}")
     plt.close(fig)
     return fig
 

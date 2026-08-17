@@ -56,7 +56,9 @@ def read_lab_data() -> pd.DataFrame:
     for sheet_name in tqdm(config_sheet_names):
         sheet = book[sheet_name]
 
-        barrier_setup = "{}-{}-{}".format(sheet["F2"].value, sheet["F3"].value, sheet["F4"].value)
+        barrier_setup = "{}-{}-{}".format(
+            sheet["F2"].value, sheet["F3"].value, sheet["F4"].value
+        )
         operation_mode = sheet["F5"].value
         set_flow = parse_float(sheet["B2"].value)
 
@@ -102,11 +104,8 @@ def read_barrier_data() -> pd.DataFrame:
     df = df[df["X Position (mm)"] < 5000]
 
     df_mean = df.groupby(
-        ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"],
-        as_index=False
-    ).agg(
-        **{"Mean Upstream Depth (mm)": ("Depth (mm)", "mean")}
-    )
+        ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"], as_index=False
+    ).agg(**{"Mean Upstream Depth (mm)": ("Depth (mm)", "mean")})
 
     return df_mean
 
@@ -116,7 +115,11 @@ def read_friction_data() -> pd.DataFrame:
 
     df = pd.read_csv(path)
 
-    df = df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])["Depth (mm)"].mean().reset_index()
+    df = (
+        df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])["Depth (mm)"]
+        .mean()
+        .reset_index()
+    )
 
     return df
 
@@ -127,11 +130,17 @@ def compute_friction_regression_data(data: pd.DataFrame) -> pd.DataFrame:
     Adds the free-surface slope, wetted perimeter and composite Manning's n
     for each measured point.
     """
-    data["AOD (m)"] = ((10000 - data["X Position (mm)"]) / 1000) * (data["Incline (%)"] / 100)
-    data["Velocity Head (m)"] = np.power((data["Set Flow (l/s)"] / data["Depth (mm)"]), 2) / (2 * 9.81)
+    data["AOD (m)"] = ((10000 - data["X Position (mm)"]) / 1000) * (
+        data["Incline (%)"] / 100
+    )
+    data["Velocity Head (m)"] = np.power(
+        (data["Set Flow (l/s)"] / data["Depth (mm)"]), 2
+    ) / (2 * 9.81)
     data["Depth (m)"] = data["Depth (mm)"] / 1000
 
-    data["Total Head (m)"] = data["AOD (m)"] + data["Velocity Head (m)"] + data["Depth (m)"]
+    data["Total Head (m)"] = (
+        data["AOD (m)"] + data["Velocity Head (m)"] + data["Depth (m)"]
+    )
 
     data["X Position (m)"] = data["X Position (mm)"] / 1000
 
@@ -139,13 +148,20 @@ def compute_friction_regression_data(data: pd.DataFrame) -> pd.DataFrame:
         slope, _ = np.polyfit(group["X Position (m)"], group["Total Head (m)"], 1)
         return slope
 
-    slope_data = data.groupby(["Set Flow (l/s)", "Incline (%)"]).apply(get_head_slope).reset_index(name="Free Surface Slope")
+    slope_data = (
+        data.groupby(["Set Flow (l/s)", "Incline (%)"])
+        .apply(get_head_slope)
+        .reset_index(name="Free Surface Slope")
+    )
 
     data = data.merge(slope_data, on=["Set Flow (l/s)", "Incline (%)"], how="left")
     data["Sf"] = -data["Free Surface Slope"]
     data["P (m)"] = CHANNEL_WIDTH + (2 * data["Depth (m)"])
 
-    data["Composite n"] = np.sqrt((data["Sf"] * np.power(data["Depth (m)"], 10/3)) / (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4/3)))
+    data["Composite n"] = np.sqrt(
+        (data["Sf"] * np.power(data["Depth (m)"], 10 / 3))
+        / (np.power(data["Set Flow (l/s)"] / 1000, 2) * np.power(data["P (m)"], 4 / 3))
+    )
 
     return data
 
@@ -168,8 +184,8 @@ def analyse_friction_data(data: pd.DataFrame):
     x_vals, y_vals = friction_regression_variables(data)
     slope, intercept = np.polyfit(x_vals, y_vals, 1)
 
-    bed_n = np.power(2 * intercept, 2/3)
-    wall_n = np.power(slope, 2/3)
+    bed_n = np.power(2 * intercept, 2 / 3)
+    wall_n = np.power(slope, 2 / 3)
 
     return bed_n, wall_n
 
@@ -195,12 +211,14 @@ def shortest_coverage_interval(data: np.ndarray, alpha: float = 0.95) -> tuple:
     p = int(np.floor(alpha * n_samples))
     if p == 0:
         return data[0], data[-1]
-    widths = data[p:] - data[:n_samples - p]
+    widths = data[p:] - data[: n_samples - p]
     min_idx = np.argmin(widths)
     return data[min_idx], data[min_idx + p]
 
 
-def _flow_uncertainty_samples(nominal_flow: float, trials: int, rng: np.random.Generator) -> np.ndarray:
+def _flow_uncertainty_samples(
+    nominal_flow: float, trials: int, rng: np.random.Generator
+) -> np.ndarray:
     """Sample flows uniformly within the flow meter's error band around the set flow."""
     area = np.pi * (FLOW_METER_PIPE_DIAMETER / 2) ** 2
     flow_error_from_velocity_ls = area * FLOW_METER_VELOCITY_ERROR * 1000
@@ -211,7 +229,7 @@ def _flow_uncertainty_samples(nominal_flow: float, trials: int, rng: np.random.G
     return rng.uniform(
         nominal_flow - total_flow_half_width,
         nominal_flow + total_flow_half_width,
-        size=trials
+        size=trials,
     )
 
 
@@ -232,7 +250,9 @@ def _depth_uncertainty_samples(grouped, trials: int, rng: np.random.Generator) -
 
         if n > 1 and std > 0:
             scale = std / np.sqrt(n)
-            samples = t.rvs(df=n-1, loc=mean, scale=scale, size=trials, random_state=rng)
+            samples = t.rvs(
+                df=n - 1, loc=mean, scale=scale, size=trials, random_state=rng
+            )
         else:
             samples = np.full(trials, mean)
 
@@ -241,17 +261,25 @@ def _depth_uncertainty_samples(grouped, trials: int, rng: np.random.Generator) -
     return group_keys, mc_depths
 
 
-def run_monte_carlo_analysis(df: pd.DataFrame, model, report_path: Path, trials: int = 200000, seed: int = 42):
+def run_monte_carlo_analysis(
+    df: pd.DataFrame, model, report_path: Path, trials: int = 200000, seed: int = 42
+):
     rng = np.random.default_rng(seed)
 
-    unique_conditions = df[["Barrier Setup", "Operation Mode", "Set Flow (l/s)"]].drop_duplicates()
+    unique_conditions = df[
+        ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"]
+    ].drop_duplicates()
     condition_to_flow_samples = {}
 
     for _, row in unique_conditions.iterrows():
         key = (row["Barrier Setup"], row["Operation Mode"], row["Set Flow (l/s)"])
-        condition_to_flow_samples[key] = _flow_uncertainty_samples(row["Set Flow (l/s)"], trials, rng)
+        condition_to_flow_samples[key] = _flow_uncertainty_samples(
+            row["Set Flow (l/s)"], trials, rng
+        )
 
-    grouped = df.groupby(["Barrier Setup", "Operation Mode", "Set Flow (l/s)", "X Position (mm)"])
+    grouped = df.groupby(
+        ["Barrier Setup", "Operation Mode", "Set Flow (l/s)", "X Position (mm)"]
+    )
     group_keys, mc_depths = _depth_uncertainty_samples(grouped, trials, rng)
 
     stats_results = {
@@ -261,7 +289,7 @@ def run_monte_carlo_analysis(df: pd.DataFrame, model, report_path: Path, trials:
         "Variability Ratio": np.zeros(trials),
         "Correlation": np.zeros(trials),
         "KGE": np.zeros(trials),
-        "R Squared": np.zeros(trials)
+        "R Squared": np.zeros(trials),
     }
 
     has_fit = hasattr(model, "fit") and hasattr(model, "optimal")
@@ -273,7 +301,7 @@ def run_monte_carlo_analysis(df: pd.DataFrame, model, report_path: Path, trials:
         if opt_is_array:
             num_coeffs = len(model.optimal)
             for k in range(num_coeffs):
-                stats_results[f"Optimised Coefficient {k+1}"] = np.zeros(trials)
+                stats_results[f"Optimised Coefficient {k + 1}"] = np.zeros(trials)
         else:
             stats_results["Optimised Coefficient"] = np.zeros(trials)
 
@@ -289,24 +317,23 @@ def run_monte_carlo_analysis(df: pd.DataFrame, model, report_path: Path, trials:
             trial_rows = []
             for i, name in enumerate(group_keys):
                 condition_key = (name[0], name[1], name[2])
-                trial_rows.append({
-                    "Barrier Setup": name[0],
-                    "Operation Mode": name[1],
-                    "Set Flow (l/s)": condition_to_flow_samples[condition_key][j],
-                    "X Position (mm)": name[3],
-                    "Y Position (mm)": 0.0,
-                    "Depth (mm)": mc_depths[i, j]
-                })
+                trial_rows.append(
+                    {
+                        "Barrier Setup": name[0],
+                        "Operation Mode": name[1],
+                        "Set Flow (l/s)": condition_to_flow_samples[condition_key][j],
+                        "X Position (mm)": name[3],
+                        "Y Position (mm)": 0.0,
+                        "Depth (mm)": mc_depths[i, j],
+                    }
+                )
 
             trial_df = pd.DataFrame(trial_rows)
             trial_df = trial_df[trial_df["X Position (mm)"] < 5000]
 
             trial_df = trial_df.groupby(
-                ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"],
-                as_index=False
-            ).agg(
-                **{"Mean Upstream Depth (mm)": ("Depth (mm)", "mean")}
-            )
+                ["Barrier Setup", "Operation Mode", "Set Flow (l/s)"], as_index=False
+            ).agg(**{"Mean Upstream Depth (mm)": ("Depth (mm)", "mean")})
 
             processed_df = model._create_model_dataframe(trial_df)
 
@@ -316,13 +343,15 @@ def run_monte_carlo_analysis(df: pd.DataFrame, model, report_path: Path, trials:
                     model.fit()
                     if opt_is_array:
                         for k in range(num_coeffs):
-                            stats_results[f"Optimised Coefficient {k+1}"][j] = model.optimal[k]
+                            stats_results[f"Optimised Coefficient {k + 1}"][j] = (
+                                model.optimal[k]
+                            )
                     else:
                         stats_results["Optimised Coefficient"][j] = model.optimal
                 except Exception:
                     if opt_is_array:
                         for k in range(num_coeffs):
-                            stats_results[f"Optimised Coefficient {k+1}"][j] = np.nan
+                            stats_results[f"Optimised Coefficient {k + 1}"][j] = np.nan
                     else:
                         stats_results["Optimised Coefficient"][j] = np.nan
 
@@ -370,7 +399,9 @@ def run_friction_monte_carlo_analysis(trials: int = 200000, seed: int = 42):
 
     for _, row in unique_conditions.iterrows():
         key = (row["Set Flow (l/s)"], row["Incline (%)"])
-        condition_to_flow_samples[key] = _flow_uncertainty_samples(row["Set Flow (l/s)"], trials, rng)
+        condition_to_flow_samples[key] = _flow_uncertainty_samples(
+            row["Set Flow (l/s)"], trials, rng
+        )
 
     grouped = df.groupby(["Set Flow (l/s)", "Incline (%)", "X Position (mm)"])
     group_keys, mc_depths = _depth_uncertainty_samples(grouped, trials, rng)
@@ -385,12 +416,14 @@ def run_friction_monte_carlo_analysis(trials: int = 200000, seed: int = 42):
             trial_rows = []
             for i, name in enumerate(group_keys):
                 condition_key = (name[0], name[1])
-                trial_rows.append({
-                    "Set Flow (l/s)": condition_to_flow_samples[condition_key][j],
-                    "Incline (%)": name[1],
-                    "X Position (mm)": name[2],
-                    "Depth (mm)": mc_depths[i, j]
-                })
+                trial_rows.append(
+                    {
+                        "Set Flow (l/s)": condition_to_flow_samples[condition_key][j],
+                        "Incline (%)": name[1],
+                        "X Position (mm)": name[2],
+                        "Depth (mm)": mc_depths[i, j],
+                    }
+                )
 
             trial_df = pd.DataFrame(trial_rows)
 
@@ -405,11 +438,13 @@ def run_friction_monte_carlo_analysis(trials: int = 200000, seed: int = 42):
     bed_lower, bed_upper = shortest_coverage_interval(bed_n_results, 0.95)
     wall_lower, wall_upper = shortest_coverage_interval(wall_n_results, 0.95)
 
-    output_df = pd.DataFrame({
-        "Bound": ["Lower", "Upper"],
-        "Bed": [bed_lower, bed_upper],
-        "Wall": [wall_lower, wall_upper]
-    })
+    output_df = pd.DataFrame(
+        {
+            "Bound": ["Lower", "Upper"],
+            "Bed": [bed_lower, bed_upper],
+            "Wall": [wall_lower, wall_upper],
+        }
+    )
 
     output_path = Path("exports/reports/frictionCIValues.csv")
     output_df.to_csv(output_path, index=False)

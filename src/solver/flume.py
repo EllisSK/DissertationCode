@@ -14,6 +14,7 @@ from src.constants import GRAVITY, PLANK_1_HEIGHT, PLANK_2_HEIGHT, PLANK_3_HEIGH
 
 from .solver import simulate, simulate_barrier
 
+
 class Flume:
     def __init__(self, barrier_setup: str | None, set_flow: float, incline: float):
         self.barrier = barrier_setup
@@ -23,7 +24,7 @@ class Flume:
     def _get_mannings_fn(self) -> Callable:
         path = Path("exports/reports/frictionValues.csv")
         df = pd.read_csv(path)
-        
+
         n_bed = df["Bed"].iloc[0]
         n_wall = df["Wall"].iloc[0]
 
@@ -32,8 +33,8 @@ class Flume:
             p_wall = 2.0 * h
             p_total = p_bed + p_wall
 
-            n_composite = ((p_bed * (n_bed ** 1.5)) + (p_wall * (n_wall ** 1.5))) / p_total
-            
+            n_composite = ((p_bed * (n_bed**1.5)) + (p_wall * (n_wall**1.5))) / p_total
+
             return n_composite ** (2 / 3)
 
         return fn
@@ -61,42 +62,48 @@ class Flume:
 
         def fn(h, ds):
             h_arr = np.atleast_1d(h)
-            
+
             c3t = h_arr > plank3_top
             c3b = h_arr > plank3_bottom
             c2t = h_arr > plank2_top
             c2b = h_arr > plank2_bottom
             c1t = h_arr > plank1_top
-            
+
             if gap1 != 0:
                 h_sluice = h_arr
                 sluice_gap = np.full_like(h_arr, gap1)
-                
+
                 hb_orifice1 = np.where(c2b, h_arr - plank1_top, 0.0)
                 ht_orifice1 = np.where(c2b, h_arr - plank2_bottom, 0.0)
-                
+
                 hb_orifice2 = np.where(c3b, h_arr - plank2_top, 0.0)
                 ht_orifice2 = np.where(c3b, h_arr - plank3_bottom, 0.0)
-                
+
                 h_weir = np.select(
                     [c3t, c3b, c2t, c2b, c1t],
-                    [h_arr - plank3_top, 0.0, h_arr - plank2_top, 0.0, h_arr - plank1_top],
-                    default=0.0
+                    [
+                        h_arr - plank3_top,
+                        0.0,
+                        h_arr - plank2_top,
+                        0.0,
+                        h_arr - plank1_top,
+                    ],
+                    default=0.0,
                 )
             else:
                 h_sluice = np.zeros_like(h_arr)
                 sluice_gap = np.zeros_like(h_arr)
-                
+
                 hb_orifice1 = np.where(c2b, h_arr - plank1_top, 0.0)
                 ht_orifice1 = np.where(c2b, h_arr - plank2_bottom, 0.0)
-                
+
                 hb_orifice2 = np.where(c3b, h_arr - plank2_top, 0.0)
                 ht_orifice2 = np.where(c3b, h_arr - plank3_bottom, 0.0)
-                
+
                 h_weir = np.select(
                     [c3t, c3b, c2t, c2b],
                     [h_arr - plank3_top, 0.0, h_arr - plank2_top, 0.0],
-                    default=h_arr - plank1_top
+                    default=h_arr - plank1_top,
                 )
 
             q_sluice = np.zeros_like(h_arr)
@@ -104,25 +111,41 @@ class Flume:
                 vc_depth = coeff_contraction * sluice_gap
                 head_sluice = np.maximum(h_sluice - vc_depth, 0.0)
                 q_sluice = coeff_discharge * sluice_gap * np.sqrt(2 * g * head_sluice)
-                
-            q_orifice1 = (2/3) * coeff_discharge * np.sqrt(2 * g) * (
-                np.power(np.maximum(hb_orifice1, 0.0), 1.5) - 
-                np.power(np.maximum(ht_orifice1, 0.0), 1.5)
+
+            q_orifice1 = (
+                (2 / 3)
+                * coeff_discharge
+                * np.sqrt(2 * g)
+                * (
+                    np.power(np.maximum(hb_orifice1, 0.0), 1.5)
+                    - np.power(np.maximum(ht_orifice1, 0.0), 1.5)
+                )
             )
-            
-            q_orifice2 = (2/3) * coeff_discharge * np.sqrt(2 * g) * (
-                np.power(np.maximum(hb_orifice2, 0.0), 1.5) - 
-                np.power(np.maximum(ht_orifice2, 0.0), 1.5)
+
+            q_orifice2 = (
+                (2 / 3)
+                * coeff_discharge
+                * np.sqrt(2 * g)
+                * (
+                    np.power(np.maximum(hb_orifice2, 0.0), 1.5)
+                    - np.power(np.maximum(ht_orifice2, 0.0), 1.5)
+                )
             )
-            
-            q_weir = (2/3) * coeff_discharge * np.sqrt(2 * g) * np.power(np.maximum(h_weir, 0.0), 1.5)
-            
+
+            q_weir = (
+                (2 / 3)
+                * coeff_discharge
+                * np.sqrt(2 * g)
+                * np.power(np.maximum(h_weir, 0.0), 1.5)
+            )
+
             M_total = np.zeros_like(h_arr)
 
             if gap1 > 0:
                 h_c_sluice = coeff_contraction * sluice_gap
                 M_total += np.divide(
-                    q_sluice * q_sluice, h_c_sluice,
+                    q_sluice * q_sluice,
+                    h_c_sluice,
                     out=np.zeros_like(q_sluice),
                     where=h_c_sluice > 1e-9,
                 )
@@ -137,9 +160,12 @@ class Flume:
                 h_c_o2 = coeff_contraction * gap_o2
                 M_total += q_orifice2 * q_orifice2 / h_c_o2
 
-            h_c_weir_safe = np.where(q_weir > 1e-9, np.power(q_weir * q_weir / g, 1/3), 1.0)
+            h_c_weir_safe = np.where(
+                q_weir > 1e-9, np.power(q_weir * q_weir / g, 1 / 3), 1.0
+            )
             M_total += np.divide(
-                q_weir * q_weir, h_c_weir_safe,
+                q_weir * q_weir,
+                h_c_weir_safe,
                 out=np.zeros_like(q_weir),
                 where=q_weir > 1e-9,
             )
@@ -155,14 +181,15 @@ class Flume:
     def simulate(self):
         def bed_fn(x):
             return -self.incline * x
-        
+
         manning_fn = self._get_mannings_fn()
 
         if self.barrier:
             barrier_fn = self._get_barrier_fn(self.barrier)
-            _, profile = simulate_barrier(self.flow, bed_fn, manning_fn, barrier_fn, self.barrier)
+            _, profile = simulate_barrier(
+                self.flow, bed_fn, manning_fn, barrier_fn, self.barrier
+            )
         else:
             _, profile = simulate(self.flow, bed_fn, manning_fn)
 
         return profile
-        

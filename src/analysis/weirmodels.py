@@ -59,9 +59,7 @@ class SimpleWeirModel(BaseModel):
     def fit(self):
         df = self.df
 
-        x_data = (
-            df["Head on Weir (m)"]
-        )
+        x_data = df["Head on Weir (m)"]
 
         y_data = df["Flow (m3/s)"]
 
@@ -100,7 +98,7 @@ class AdvancedWeirModel(BaseModel):
 
         coeff_discharge = (np.pi / (np.pi + 2)) * 0.98
 
-        return (2/3) * coeff_discharge * np.sqrt(2 * GRAVITY) * np.power(h, 1.5)
+        return (2 / 3) * coeff_discharge * np.sqrt(2 * GRAVITY) * np.power(h, 1.5)
 
     def _create_model_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         return _add_weir_geometry(super()._create_model_dataframe(df))

@@ -44,7 +44,9 @@ def validate_friction_experiments(report_directory: Path):
                 obs_x = row["X Position (mm)"] / 1000.0
                 obs_depth = row["Depth (mm)"]
 
-                pred_depth = np.interp(obs_x, sim_df["X Position (m)"], sim_df["Depth (mm)"])
+                pred_depth = np.interp(
+                    obs_x, sim_df["X Position (m)"], sim_df["Depth (mm)"]
+                )
 
                 observed_list.append(obs_depth)
                 predicted_list.append(pred_depth)
@@ -82,7 +84,9 @@ def validate_barrier_experiments(df: pd.DataFrame, report_directory: Path):
                 obs_x_m = obs_x_mm / 1000.0
                 obs_depth = row["Depth (mm)"]
 
-                pred_depth = np.interp(obs_x_m, sim_df["X Position (m)"], sim_df["Depth (mm)"])
+                pred_depth = np.interp(
+                    obs_x_m, sim_df["X Position (m)"], sim_df["Depth (mm)"]
+                )
 
                 observed_all.append(obs_depth)
                 predicted_all.append(pred_depth)
@@ -97,8 +101,23 @@ def validate_barrier_experiments(df: pd.DataFrame, report_directory: Path):
     file_path = report_directory / "BarrierValidationReport.txt"
 
     with open(file_path, "w") as f:
-        _write_metric_block(f, "Barrier Validation Report - All", pd.Series(observed_all), pd.Series(predicted_all))
+        _write_metric_block(
+            f,
+            "Barrier Validation Report - All",
+            pd.Series(observed_all),
+            pd.Series(predicted_all),
+        )
         f.write("\n")
-        _write_metric_block(f, "Barrier Validation Report - Upstream", pd.Series(observed_upstream), pd.Series(predicted_upstream))
+        _write_metric_block(
+            f,
+            "Barrier Validation Report - Upstream",
+            pd.Series(observed_upstream),
+            pd.Series(predicted_upstream),
+        )
         f.write("\n")
-        _write_metric_block(f, "Barrier Validation Report - Downstream", pd.Series(observed_downstream), pd.Series(predicted_downstream))
+        _write_metric_block(
+            f,
+            "Barrier Validation Report - Downstream",
+            pd.Series(observed_downstream),
+            pd.Series(predicted_downstream),
+        )

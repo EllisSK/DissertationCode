@@ -14,30 +14,32 @@ import plotly.graph_objects as go
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
-def create_flow_us_depth_plot(df: pd.DataFrame, setups: list[str], title: str = "Barrier Flow for Different Geometric Configurations") -> go.Figure:
+def create_flow_us_depth_plot(
+    df: pd.DataFrame,
+    setups: list[str],
+    title: str = "Barrier Flow for Different Geometric Configurations",
+) -> go.Figure:
     df_sorted = df.sort_values(by="Mean Upstream Depth (mm)")
 
     fig = go.Figure()
 
     for setup in setups:
-        fig.add_trace(go.Scatter(
-            y= df_sorted[df_sorted["Barrier Setup"] == setup]["Mean Upstream Depth (mm)"],
-            x= df_sorted[df_sorted["Barrier Setup"] == setup]["Flow (m3/s)"],
-            name=setup,
-            mode="markers",
-            marker_symbol="x"
-        ))
+        fig.add_trace(
+            go.Scatter(
+                y=df_sorted[df_sorted["Barrier Setup"] == setup][
+                    "Mean Upstream Depth (mm)"
+                ],
+                x=df_sorted[df_sorted["Barrier Setup"] == setup]["Flow (m3/s)"],
+                name=setup,
+                mode="markers",
+                marker_symbol="x",
+            )
+        )
 
     fig.update_layout(
         title=title,
-        yaxis={
-            "title" : "Mean Upstream Depth (mm)",
-            "range" : [0, None]
-        },
-        xaxis={
-            "title" : "Flow (m3/s)",
-            "range" : [0, None]
-        },
+        yaxis={"title": "Mean Upstream Depth (mm)", "range": [0, None]},
+        xaxis={"title": "Flow (m3/s)", "range": [0, None]},
         legend_title_text="Barrier Setup (mm)",
     )
 
@@ -52,7 +54,7 @@ def add_function_to_plot(
     func_name: str,
     x_multiplier: int = 1,
     y_multiplier: int = 1,
-    *args
+    *args,
 ) -> go.Figure:
     n = int((x_range[1] - x_range[0]) / resolution)
     x_array = np.linspace(x_range[0], x_range[1], n)
@@ -70,7 +72,17 @@ def add_function_to_plot(
 
     return fig
 
-def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_profile: np.ndarray, point_data: pd.DataFrame = None, title: str = "", ax: plt.Axes = None):
+
+def create_barrier_depth_diagram(
+    barrier_setup: str,
+    us_profile: np.ndarray,
+    ds_profile: np.ndarray,
+    point_data: pd.DataFrame = None,
+    title: str = "",
+    ax: plt.Axes = None,
+    monochrome: bool = False,
+    line_width: float = 1.5,
+):
     FLUME_LENGTH = 12500
     FLUME_DEPTH = 800
     BARRIER_WIDTH = 15
@@ -85,34 +97,62 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
     else:
         fig = ax.figure
 
-    water_colour = "aqua"
+    surface_colour = "black" if monochrome else "aqua"
+    water_colour = "0.85" if monochrome else "aqua"
+    measured_colour = "black" if monochrome else "red"
 
     us_x = np.linspace(0, 5000, num=5000)
-    ax.plot(us_x, us_profile, color=water_colour)
+    (simulated_handle,) = ax.plot(
+        us_x,
+        us_profile,
+        color=surface_colour,
+        label="Simulated Depth",
+        linewidth=line_width,
+    )
     ax.fill_between(us_x, us_profile, 0, color=water_colour)
 
     ds_x = np.linspace(5000, 12500, num=7500)
-    ax.plot(ds_x, ds_profile, color=water_colour)
+    ax.plot(ds_x, ds_profile, color=surface_colour, linewidth=line_width)
     ax.fill_between(ds_x, ds_profile, 0, color=water_colour)
 
+    measured_handle = None
     if point_data is not None and not point_data.empty:
-        if "X Position (mm)" in point_data.columns and "Depth (mm)" in point_data.columns:
-            ax.scatter(point_data["X Position (mm)"], point_data["Depth (mm)"], color="red", zorder=20, s=15, label="Measured Depth", marker="x")
+        if (
+            "X Position (mm)" in point_data.columns
+            and "Depth (mm)" in point_data.columns
+        ):
+            measured_handle = ax.scatter(
+                point_data["X Position (mm)"],
+                point_data["Depth (mm)"],
+                color=measured_colour,
+                zorder=20,
+                s=15,
+                label="Measured Depth",
+                marker="x",
+            )
 
     gaps = list(map(int, barrier_setup.split("-")))
     current_y = gaps[0]
 
     planks_data = []
-    planks_data.append((BARRIER_X_CENTER-BARRIER_WIDTH/2, current_y, BARRIER_WIDTH, 200))
+    planks_data.append(
+        (BARRIER_X_CENTER - BARRIER_WIDTH / 2, current_y, BARRIER_WIDTH, 200)
+    )
     current_y += 200 + gaps[1]
 
-    planks_data.append((BARRIER_X_CENTER-BARRIER_WIDTH/2, current_y, BARRIER_WIDTH, 100))
+    planks_data.append(
+        (BARRIER_X_CENTER - BARRIER_WIDTH / 2, current_y, BARRIER_WIDTH, 100)
+    )
     current_y += 100 + gaps[2]
 
-    planks_data.append((BARRIER_X_CENTER-BARRIER_WIDTH/2, current_y, BARRIER_WIDTH, 100))
+    planks_data.append(
+        (BARRIER_X_CENTER - BARRIER_WIDTH / 2, current_y, BARRIER_WIDTH, 100)
+    )
 
-    for (x, y, w, h) in planks_data:
-        rect = patches.Rectangle((x, y), w, h, linewidth=1, edgecolor="black", facecolor="black", zorder=10)
+    for x, y, w, h in planks_data:
+        rect = patches.Rectangle(
+            (x, y), w, h, linewidth=1, edgecolor="black", facecolor="black", zorder=10
+        )
         ax.add_patch(rect)
 
     ax.set_xlim(0, FLUME_LENGTH)
@@ -125,6 +165,7 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
         if x in [0, 400, 800]:
             return f"{int(x)}"
         return ""
+
     ax.yaxis.set_major_formatter(FuncFormatter(y_label_filter))
 
     ax.xaxis.set_major_locator(MultipleLocator(1000))
@@ -134,6 +175,7 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
         if x in [0, 5000, 12000]:
             return f"{int(x)}"
         return ""
+
     ax.xaxis.set_major_formatter(FuncFormatter(x_label_filter))
 
     ax.tick_params(which="major", length=7)
@@ -143,17 +185,31 @@ def create_barrier_depth_diagram(barrier_setup: str, us_profile: np.ndarray, ds_
         plt.subplots_adjust(top=0.85, bottom=0.25)
         fig.text(0.02, 0.98, title, ha="left", va="top", fontweight="bold", fontsize=11)
     elif title:
-        ax.set_title(title, fontname="Arial", fontweight="bold", fontsize=10, loc="left")
+        ax.set_title(
+            title, fontname="Arial", fontweight="bold", fontsize=10, loc="left"
+        )
 
     ax.set_xlabel("Position (mm)", fontname="Arial", fontsize=11)
     ax.set_ylabel("Depth (mm)", fontname="Arial", fontsize=11)
 
-    if point_data is not None and not point_data.empty and "X Position (mm)" in point_data.columns:
-        ax.legend(loc="upper right", prop={"family": "Arial", "size": 9})
+    if measured_handle is not None:
+        # Measured first, simulated beneath it
+        ax.legend(
+            handles=[measured_handle, simulated_handle],
+            loc="upper right",
+            prop={"family": "Arial", "size": 9},
+        )
 
     return fig
 
-def create_friction_depth_diagram(incline: float, x_profile: np.ndarray, depth_profile: np.ndarray, point_data: pd.DataFrame = None, title: str = ""):
+
+def create_friction_depth_diagram(
+    incline: float,
+    x_profile: np.ndarray,
+    depth_profile: np.ndarray,
+    point_data: pd.DataFrame = None,
+    title: str = "",
+):
     FLUME_LENGTH = 12500
     FLUME_DEPTH = 800
 
@@ -173,11 +229,22 @@ def create_friction_depth_diagram(incline: float, x_profile: np.ndarray, depth_p
     ax.plot(x_profile, bed_profile, color="black", linewidth=2)
 
     if point_data is not None and not point_data.empty:
-        if "X Position (mm)" in point_data.columns and "Depth (mm)" in point_data.columns:
+        if (
+            "X Position (mm)" in point_data.columns
+            and "Depth (mm)" in point_data.columns
+        ):
             pt_x = point_data["X Position (mm)"]
             pt_bed = (12500 - pt_x) * (incline / 100)
             pt_water = pt_bed + point_data["Depth (mm)"]
-            ax.scatter(pt_x, pt_water, color="red", marker="x", zorder=20, s=25, label="Measured Depth")
+            ax.scatter(
+                pt_x,
+                pt_water,
+                color="red",
+                marker="x",
+                zorder=20,
+                s=25,
+                label="Measured Depth",
+            )
 
     ax.set_xlim(0, FLUME_LENGTH)
     ax.set_ylim(0, FLUME_DEPTH)
@@ -189,6 +256,7 @@ def create_friction_depth_diagram(incline: float, x_profile: np.ndarray, depth_p
         if x in [0, 400, 800]:
             return f"{int(x)}"
         return ""
+
     ax.yaxis.set_major_formatter(FuncFormatter(y_label_filter))
 
     ax.xaxis.set_major_locator(MultipleLocator(1000))
@@ -198,6 +266,7 @@ def create_friction_depth_diagram(incline: float, x_profile: np.ndarray, depth_p
         if x in [0, 5000, 12000]:
             return f"{int(x)}"
         return ""
+
     ax.xaxis.set_major_formatter(FuncFormatter(x_label_filter))
 
     ax.tick_params(which="major", length=7)
@@ -206,10 +275,14 @@ def create_friction_depth_diagram(incline: float, x_profile: np.ndarray, depth_p
     plt.subplots_adjust(top=0.85, bottom=0.25)
     fig.text(0.02, 0.98, title, ha="left", va="top", fontweight="bold", fontsize=11)
 
-    plt.xlabel("Position (mm)", fontname="Arial", fontdict={"size":11})
-    plt.ylabel("Elevation (mm)", fontname="Arial", fontdict={"size":11})
+    plt.xlabel("Position (mm)", fontname="Arial", fontdict={"size": 11})
+    plt.ylabel("Elevation (mm)", fontname="Arial", fontdict={"size": 11})
 
-    if point_data is not None and not point_data.empty and "X Position (mm)" in point_data.columns:
+    if (
+        point_data is not None
+        and not point_data.empty
+        and "X Position (mm)" in point_data.columns
+    ):
         ax.legend(loc="upper right", prop={"family": "Arial", "size": 9})
 
     return fig

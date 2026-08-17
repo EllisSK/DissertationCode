@@ -33,7 +33,11 @@ def kge(observed, predicted):
 
 
 def r2(observed, predicted):
-    return 1 - ((predicted - observed) ** 2).sum() / ((observed - observed.mean()) ** 2).sum()
+    return (
+        1
+        - ((predicted - observed) ** 2).sum()
+        / ((observed - observed.mean()) ** 2).sum()
+    )
 
 
 def all_metrics(observed, predicted) -> tuple:

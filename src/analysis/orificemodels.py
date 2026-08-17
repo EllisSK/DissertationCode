@@ -38,9 +38,13 @@ def _orifice_geometry(row) -> pd.Series:
 def _add_orifice_geometry(df: pd.DataFrame) -> pd.DataFrame:
     df = df[(df["Operation Mode"] == "Orifice")]
 
-    df[["Orifice Size (m)", "Orifice Bottom Height (m)", "Orifice Top Height (m)"]] = df.apply(_orifice_geometry, axis=1)
+    df[["Orifice Size (m)", "Orifice Bottom Height (m)", "Orifice Top Height (m)"]] = (
+        df.apply(_orifice_geometry, axis=1)
+    )
 
-    df["Depth at Bottom (m)"] = df["Upstream Head (m)"] - df["Orifice Bottom Height (m)"]
+    df["Depth at Bottom (m)"] = (
+        df["Upstream Head (m)"] - df["Orifice Bottom Height (m)"]
+    )
     df["Depth at Top (m)"] = df["Upstream Head (m)"] - df["Orifice Top Height (m)"]
 
     df = df[df["Depth at Top (m)"] > 0]
@@ -72,10 +76,7 @@ class SimpleOrificeModel(BaseModel):
     def fit(self):
         df = self.df
 
-        x_data = (
-            df["Depth at Bottom (m)"],
-            df["Depth at Top (m)"]
-        )
+        x_data = (df["Depth at Bottom (m)"], df["Depth at Top (m)"])
 
         y_data = df["Flow (m3/s)"]
 
@@ -86,7 +87,9 @@ class SimpleOrificeModel(BaseModel):
 
     def _calculate_objective_functions(self, df: pd.DataFrame):
         df = df.copy()
-        df["Predicted"] = self.predict((df["Depth at Bottom (m)"], df["Depth at Top (m)"]))
+        df["Predicted"] = self.predict(
+            (df["Depth at Bottom (m)"], df["Depth at Top (m)"])
+        )
 
         return self._metrics(df["Flow (m3/s)"], df["Predicted"])
 
@@ -120,7 +123,12 @@ class AdvancedOrificeModel(BaseModel):
 
         coeff_discharge = coeff_contraction * coeff_velocity
 
-        return (2/3) * coeff_discharge * np.sqrt(2 * GRAVITY) * (np.power(bottom, 1.5) - np.power(top, 1.5))
+        return (
+            (2 / 3)
+            * coeff_discharge
+            * np.sqrt(2 * GRAVITY)
+            * (np.power(bottom, 1.5) - np.power(top, 1.5))
+        )
 
     def predict(self, X):
         flow = self._equation(X)
@@ -128,7 +136,9 @@ class AdvancedOrificeModel(BaseModel):
 
     def _calculate_objective_functions(self, df: pd.DataFrame):
         df = df.copy()
-        df["Predicted"] = self.predict((df["Depth at Bottom (m)"], df["Depth at Top (m)"]))
+        df["Predicted"] = self.predict(
+            (df["Depth at Bottom (m)"], df["Depth at Top (m)"])
+        )
 
         return self._metrics(df["Flow (m3/s)"], df["Predicted"])
 

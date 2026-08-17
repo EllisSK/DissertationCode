@@ -78,7 +78,9 @@ def run_analysis():
 
 def run_visualisations():
     filtered_lab_data = remove_submerged(read_barrier_data())
-    filtered_raw_lab_data = remove_submerged(pd.read_csv(Path("data/BarrierExperiments.csv")))
+    filtered_raw_lab_data = remove_submerged(
+        pd.read_csv(Path("data/BarrierExperiments.csv"))
+    )
     fric_data = pd.read_csv(Path("data/ManningsNExperiments.csv"))
 
     visualisation_1_1(filtered_lab_data)

@@ -17,7 +17,7 @@ def create_custom_template():
         "#ff9d3a",
         "#ff73b6",
         "#f9e858",
-        "#003a7d"
+        "#003a7d",
     ]
 
     custom_template.layout = {
@@ -39,33 +39,15 @@ def create_custom_template():
             "showgrid": False,
             "ticks": "outside",
         },
-        "title" : {
-            "font" : {
-                "family" : "Aptos Bold, sans-serif",
-                "size" : 48,
-                "color" : "black"
-            },
-            "x" : 0.0,
-            "xanchor" : "left"
+        "title": {
+            "font": {"family": "Aptos Bold, sans-serif", "size": 48, "color": "black"},
+            "x": 0.0,
+            "xanchor": "left",
         },
-        "margin" : {
-            "l" : 150,
-            "b" : 100
-        }
+        "margin": {"l": 150, "b": 100},
     }
 
-    custom_template.data = {
-        "scatter" : [
-            {
-                "line" : {
-                    "width" : 6
-                },
-                "marker" : {
-                    "size" : 18
-                }
-            }
-        ]
-    }
+    custom_template.data = {"scatter": [{"line": {"width": 6}, "marker": {"size": 18}}]}
 
     pio.templates["custom_template"] = custom_template
     pio.templates.default = "custom_template"

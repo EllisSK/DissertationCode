@@ -9,6 +9,7 @@ from typing import Callable
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def apply_bcs(Q: np.ndarray, flow_rate: float, zb: np.ndarray):
     g = 9.81
 
@@ -17,14 +18,15 @@ def apply_bcs(Q: np.ndarray, flow_rate: float, zb: np.ndarray):
 
     h_interior = np.maximum(Q[-2, 0] - zb[-2, 0], 1e-6)
     q_out = Q[-2, 1]
-    
-    h_c = (q_out**2 / g)**(1/3)
-    
+
+    h_c = (q_out**2 / g) ** (1 / 3)
+
     if h_interior < h_c:
         Q[-1, 0] = Q[-2, 0] - zb[-2, 0] + zb[-1, 0]
     else:
         Q[-1, 0] = h_c
     Q[-1, 1] = q_out
+
 
 def get_flux(Q: np.ndarray, zb: np.ndarray):
     eta = Q[:, 0]
@@ -41,6 +43,7 @@ def get_flux(Q: np.ndarray, zb: np.ndarray):
 
     return F
 
+
 def get_source(Q: np.ndarray, zb: np.ndarray, dx: float, mannings_fn: Callable):
     eta = Q[:, 0]
     q = Q[:, 1]
@@ -53,12 +56,18 @@ def get_source(Q: np.ndarray, zb: np.ndarray, dx: float, mannings_fn: Callable):
     mannings_n = mannings_fn(h)
 
     R = np.divide(h, 1 + 2 * h, out=np.zeros_like(h), where=h > 1e-6)
-    friction = np.divide(g * (mannings_n**2) * q * np.abs(q), h * (R**(4/3)), out=np.zeros_like(q), where=h > 1e-6)
+    friction = np.divide(
+        g * (mannings_n**2) * q * np.abs(q),
+        h * (R ** (4 / 3)),
+        out=np.zeros_like(q),
+        where=h > 1e-6,
+    )
 
     S = np.zeros_like(Q)
     S[:, 1] = bed_slope - friction
 
     return S
+
 
 def hll_flux(Q_L: np.ndarray, Q_R: np.ndarray, zb_interface: np.ndarray):
     eta_L = Q_L[:, 0]
@@ -102,23 +111,30 @@ def hll_flux(Q_L: np.ndarray, Q_R: np.ndarray, zb_interface: np.ndarray):
     SR_star = S_R[cond_star, np.newaxis]
 
     F_int[cond_star] = (
-        (SR_star * F_L[cond_star]) - (SL_star * F_R[cond_star]) +
-        (SL_star * SR_star * (Q_R[cond_star] - Q_L[cond_star]))
+        (SR_star * F_L[cond_star])
+        - (SL_star * F_R[cond_star])
+        + (SL_star * SR_star * (Q_R[cond_star] - Q_L[cond_star]))
     ) / (SR_star - SL_star)
 
     return F_int
+
 
 def spatial_reconstructor(Q: np.ndarray, dx: float):
     grad_U = np.zeros_like(Q)
 
     diff_bwd = (Q[1:-1] - Q[:-2]) / dx
     diff_fwd = (Q[2:] - Q[1:-1]) / dx
-    grad_U[1:-1] = 0.5 * (np.sign(diff_bwd) + np.sign(diff_fwd)) * np.minimum(np.abs(diff_bwd), np.abs(diff_fwd))
+    grad_U[1:-1] = (
+        0.5
+        * (np.sign(diff_bwd) + np.sign(diff_fwd))
+        * np.minimum(np.abs(diff_bwd), np.abs(diff_fwd))
+    )
 
     Q_L = Q[:-1] + (0.5 * dx * grad_U[:-1])
     Q_R = Q[1:] - (0.5 * dx * grad_U[1:])
 
     return Q_L, Q_R
+
 
 def dynamic_timestep(Q: np.ndarray, zb: np.ndarray, dx: float):
     h = np.maximum(Q[:, 0] - zb[:, 0], 0.0)
@@ -130,7 +146,10 @@ def dynamic_timestep(Q: np.ndarray, zb: np.ndarray, dx: float):
 
     return 0.49 * np.nextafter(dx / max_speed, -np.inf)
 
-def simulate(flow_rate: float, bed_function: Callable | None, mannings_function: Callable):
+
+def simulate(
+    flow_rate: float, bed_function: Callable | None, mannings_function: Callable
+):
     length = 12.5
     resolution = 0.1
     start_depth = 0.05
@@ -163,19 +182,30 @@ def simulate(flow_rate: float, bed_function: Callable | None, mannings_function:
 
     plt.ion()
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
-    fig.suptitle(f"SWE Solver | Flow: {flow_rate*1000} l/s")
+    fig.suptitle(f"SWE Solver | Flow: {flow_rate * 1000} l/s")
 
-    line_eta, = ax1.plot(x_vals_full, Q_array[:, 0], label="Water Elevation (eta)", color="blue", lw=2)
-    line_zb, = ax1.plot(x_vals_full, zb[:, 0], label="Bed Elevation (zb)", color="black", lw=2, linestyle='--')
+    (line_eta,) = ax1.plot(
+        x_vals_full, Q_array[:, 0], label="Water Elevation (eta)", color="blue", lw=2
+    )
+    (line_zb,) = ax1.plot(
+        x_vals_full,
+        zb[:, 0],
+        label="Bed Elevation (zb)",
+        color="black",
+        lw=2,
+        linestyle="--",
+    )
     ax1.set_ylabel("Elevation (m)")
     ax1.legend()
-    ax1.grid(True, linestyle=':', alpha=0.6)
+    ax1.grid(True, linestyle=":", alpha=0.6)
 
-    line_u, = ax2.plot(x_vals_full, np.zeros_like(x_vals_full), label="Velocity (u)", color="red", lw=2)
+    (line_u,) = ax2.plot(
+        x_vals_full, np.zeros_like(x_vals_full), label="Velocity (u)", color="red", lw=2
+    )
     ax2.set_xlabel("Distance along flume (m)")
     ax2.set_ylabel("Velocity (m/s)")
     ax2.legend()
-    ax2.grid(True, linestyle=':', alpha=0.6)
+    ax2.grid(True, linestyle=":", alpha=0.6)
 
     step = 0
     plot_freq = 100
@@ -214,7 +244,7 @@ def simulate(flow_rate: float, bed_function: Callable | None, mannings_function:
         if step % plot_freq == 0:
             eta = Q_array[:, 0]
             h = np.maximum(eta - zb[:, 0], 0.0)
-            
+
             u = np.divide(Q_array[:, 1], h, out=np.zeros_like(h), where=h > 1e-4)
 
             line_eta.set_ydata(eta)
@@ -228,7 +258,7 @@ def simulate(flow_rate: float, bed_function: Callable | None, mannings_function:
 
             fig.canvas.draw()
             fig.canvas.flush_events()
-            
+
         step += 1
 
     plt.ioff()
@@ -236,7 +266,14 @@ def simulate(flow_rate: float, bed_function: Callable | None, mannings_function:
 
     return t, Q_array
 
-def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_function: Callable, barrier_function: Callable, barrier_label: str | None = None):
+
+def simulate_barrier(
+    flow_rate: float,
+    bed_function: Callable | None,
+    mannings_function: Callable,
+    barrier_function: Callable,
+    barrier_label: str | None = None,
+):
     length = 12.5
     resolution = 0.1
     start_depth = 0.05
@@ -275,14 +312,18 @@ def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_f
         q_b = float(q_b)
         M_jet = float(M_jet)
         h_L_safe = max(h_L, 1e-6)
-        F_L = np.array([
-            q_b,
-            q_b * q_b / h_L_safe + 0.5 * g * (eta_L * eta_L - 2.0 * eta_L * z_int),
-        ])
-        F_R = np.array([
-            q_b,
-            M_jet + 0.5 * g * (eta_R * eta_R - 2.0 * eta_R * z_int),
-        ])
+        F_L = np.array(
+            [
+                q_b,
+                q_b * q_b / h_L_safe + 0.5 * g * (eta_L * eta_L - 2.0 * eta_L * z_int),
+            ]
+        )
+        F_R = np.array(
+            [
+                q_b,
+                M_jet + 0.5 * g * (eta_R * eta_R - 2.0 * eta_R * z_int),
+            ]
+        )
         return F_L, F_R
 
     plt.ion()
@@ -292,19 +333,32 @@ def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_f
         title += f" | Barrier: {barrier_label}"
     fig.suptitle(title)
 
-    line_eta, = ax1.plot(x_vals_full, Q_array[:, 0], label="Water Elevation (eta)", color="blue", lw=2)
-    line_zb,  = ax1.plot(x_vals_full, zb[:, 0],     label="Bed Elevation (zb)",   color="black", lw=2, linestyle='--')
-    ax1.axvline(barrier_x, color='red', lw=1.5, alpha=0.7, linestyle=':', label='Barrier')
+    (line_eta,) = ax1.plot(
+        x_vals_full, Q_array[:, 0], label="Water Elevation (eta)", color="blue", lw=2
+    )
+    (line_zb,) = ax1.plot(
+        x_vals_full,
+        zb[:, 0],
+        label="Bed Elevation (zb)",
+        color="black",
+        lw=2,
+        linestyle="--",
+    )
+    ax1.axvline(
+        barrier_x, color="red", lw=1.5, alpha=0.7, linestyle=":", label="Barrier"
+    )
     ax1.set_ylabel("Elevation (m)")
     ax1.legend()
-    ax1.grid(True, linestyle=':', alpha=0.6)
+    ax1.grid(True, linestyle=":", alpha=0.6)
 
-    line_u, = ax2.plot(x_vals_full, np.zeros_like(x_vals_full), label="Velocity (u)", color="red", lw=2)
-    ax2.axvline(barrier_x, color='red', lw=1.5, alpha=0.7, linestyle=':')
+    (line_u,) = ax2.plot(
+        x_vals_full, np.zeros_like(x_vals_full), label="Velocity (u)", color="red", lw=2
+    )
+    ax2.axvline(barrier_x, color="red", lw=1.5, alpha=0.7, linestyle=":")
     ax2.set_xlabel("Distance along flume (m)")
     ax2.set_ylabel("Velocity (m/s)")
     ax2.legend()
-    ax2.grid(True, linestyle=':', alpha=0.6)
+    ax2.grid(True, linestyle=":", alpha=0.6)
 
     step = 0
     plot_freq = 100
@@ -323,7 +377,7 @@ def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_f
             Q_L[barrier_idx, 0], Q_R[barrier_idx, 0], zb_interface[barrier_idx, 0]
         )
         flux_grad[barrier_idx - 1] = (F_b_L - F_int[barrier_idx - 1]) / dx
-        flux_grad[barrier_idx]     = (F_int[barrier_idx + 1] - F_b_R) / dx
+        flux_grad[barrier_idx] = (F_int[barrier_idx + 1] - F_b_R) / dx
 
         S = get_source(Q_array, zb, dx, mannings_function)
         K1 = np.zeros_like(Q_array)
@@ -341,7 +395,7 @@ def simulate_barrier(flow_rate: float, bed_function: Callable | None, mannings_f
             Q_L_s[barrier_idx, 0], Q_R_s[barrier_idx, 0], zb_interface[barrier_idx, 0]
         )
         flux_grad_s[barrier_idx - 1] = (F_b_L_s - F_int_s[barrier_idx - 1]) / dx
-        flux_grad_s[barrier_idx]     = (F_int_s[barrier_idx + 1] - F_b_R_s) / dx
+        flux_grad_s[barrier_idx] = (F_int_s[barrier_idx + 1] - F_b_R_s) / dx
 
         S_s = get_source(Q_array, zb, dx, mannings_function)
         K2 = np.zeros_like(Q_array)

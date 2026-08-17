@@ -18,7 +18,9 @@ from .basemodel import BaseModel
 def _add_sluice_geometry(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["Operation Mode"] == "Sluice"]
 
-    df["Sluice Gap (m)"] = (df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000)
+    df["Sluice Gap (m)"] = (
+        df["Barrier Setup"].str.split("-", n=1).str[0].astype(int) / 1000
+    )
     return df
 
 
@@ -46,10 +48,7 @@ class SimpleSluiceModel(BaseModel):
     def fit(self):
         df = self.df
 
-        x_data = (
-            df["Upstream Head (m)"],
-            df["Sluice Gap (m)"]
-        )
+        x_data = (df["Upstream Head (m)"], df["Sluice Gap (m)"])
 
         y_data = df["Flow (m3/s)"]
 
